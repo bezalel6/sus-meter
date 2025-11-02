@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sus Meter</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <h1>🔍 Sus Meter</h1>
+      <p>Check Chess Profile Age & Stats</p>
+    </header>
+
+    <!-- Search Form -->
+    <div class="search-form">
+      <input
+        type="text"
+        id="username-input"
+        placeholder="Enter username..."
+        autofocus
+      />
+      <div class="platform-row">
+        <label class="radio-label">
+          <input type="radio" name="platform" value="lichess" checked>
+          <span>Lichess</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="platform" value="chess.com">
+          <span>Chess.com</span>
+        </label>
+        <button id="search-btn" class="search-button">
+          Check
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <span>Checking profile...</span>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error" class="error hidden">
+      <span id="error-text"></span>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="results hidden">
+      <!-- Account Age Card (Primary) -->
+      <div class="age-card" id="age-card">
+        <div class="age-label">Account Age</div>
+        <div class="age-value" id="age-value">-</div>
+        <div class="age-date" id="age-date">-</div>
+      </div>
+
+      <!-- Profile Info -->
+      <div class="profile-info">
+        <div class="profile-header">
+          <span class="username" id="username">-</span>
+          <span class="platform-tag" id="platform-tag">-</span>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-label">Rating</span>
+            <span class="stat-value" id="rating">-</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Games</span>
+            <span class="stat-value" id="games">-</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Win Rate</span>
+            <span class="stat-value" id="winrate">-</span>
+          </div>
+        </div>
+
+        <!-- Suspicion Score -->
+        <div class="suspicion" id="suspicion">
+          <div class="suspicion-header">
+            <span>Suspicion Level</span>
+            <span class="suspicion-level" id="suspicion-level">-</span>
+          </div>
+          <div class="suspicion-bar">
+            <div class="suspicion-fill" id="suspicion-fill"></div>
+          </div>
+          <ul class="suspicion-reasons" id="suspicion-reasons"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div id="history" class="history">
+      <div class="history-header">
+        <span>Recent</span>
+        <button id="clear-history" class="clear-btn">Clear</button>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

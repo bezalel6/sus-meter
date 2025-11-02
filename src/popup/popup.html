@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sus Meter</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>Sus Meter</h1>
+      </header>
+
+      <main>
+        <div class="status">
+          <span class="status-label">Status:</span>
+          <span id="status-indicator" class="status-active">Active</span>
+        </div>
+
+        <div class="controls">
+          <button id="toggle-btn" class="btn btn-primary">
+            <span id="toggle-text">Disable</span>
+          </button>
+
+          <button id="scan-btn" class="btn btn-secondary">
+            Scan Page
+          </button>
+        </div>
+
+        <div class="info-section">
+          <h3>Page Info</h3>
+          <div id="page-info" class="info-content">
+            <p>URL: <span id="page-url">Loading...</span></p>
+            <p>Elements: <span id="element-count">0</span></p>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Settings</h3>
+          <div class="settings-content">
+            <label class="checkbox-label">
+              <input type="checkbox" id="notifications-check" checked />
+              <span>Enable notifications</span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="auto-scan-check" />
+              <span>Auto-scan pages</span>
+            </label>
+          </div>
+        </div>
+      </main>
+
+      <footer>
+        <button id="settings-btn" class="text-btn">Advanced Settings</button>
+      </footer>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
