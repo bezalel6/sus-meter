@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill';
 import { ProfileDetection, ChessPlatform, ExtensionMessage } from '@/types';
 import { createLogger } from '@/utils/logger';
 import { ProfileInjector } from './profile-injector';
+import { ProfileButtonInjector } from './profile-button-injector';
 
 const logger = createLogger('LichessContent');
 const platform: ChessPlatform = 'lichess';
@@ -12,11 +13,13 @@ const platform: ChessPlatform = 'lichess';
 export class LichessProfileDetector {
   private observer: MutationObserver | null = null;
   private injector: ProfileInjector;
+  private buttonInjector: ProfileButtonInjector;
   private detectedProfiles = new Set<string>();
   private isEnabled = true;
 
   constructor() {
     this.injector = new ProfileInjector(platform);
+    this.buttonInjector = new ProfileButtonInjector(platform);
   }
 
   /**
@@ -42,10 +45,9 @@ export class LichessProfileDetector {
     }
 
     // Listen for enable/disable messages
-    browser.runtime.onMessage.addListener((message: unknown, sender: any, sendResponse: any): true => {
-      this.handleMessage(message as ExtensionMessage, sender, sendResponse);
-      return true; // Always return true for async response
-    });
+    browser.runtime.onMessage.addListener(((message: unknown, sender: any, sendResponse: any) => {
+      return this.handleMessage(message as ExtensionMessage, sender, sendResponse);
+    }) as any);
   }
 
   /**
@@ -293,7 +295,7 @@ export class LichessProfileDetector {
     request: ExtensionMessage,
     _sender: browser.Runtime.MessageSender,
     sendResponse: (response?: any) => void
-  ): boolean {
+  ): true | void {
     switch (request.type) {
       case 'TOGGLE_ENABLED':
         this.isEnabled = request.data?.enabled ?? false;
@@ -312,9 +314,89 @@ export class LichessProfileDetector {
         this.scanForProfiles();
         sendResponse({ success: true });
         break;
-    }
 
-    return true;
+      case 'INJECT_PROFILE_BUTTONS':
+        // Inject analysis buttons for all profiles on page
+        this.buttonInjector.injectButtons().then(result => {
+          sendResponse(result);
+        });
+        return true; // Keep message channel open for async response
+
+      case 'DISPLAY_PICKER_RESULT':
+        // Display picker analysis result
+        const { username, profile } = request;
+        if (username && profile) {
+          this.displayPickerResult(username, profile);
+        }
+        sendResponse({ success: true });
+        break;
+    }
+  }
+
+  /**
+   * Find all elements containing a specific username
+   */
+  private findUserElements(username: string): HTMLElement[] {
+    const elements: HTMLElement[] = [];
+    const usernameLC = username.toLowerCase();
+
+    // All user link selectors
+    const selectors = [
+      '.mchat__messages .user-link',
+      '.chat__messages .user-link',
+      '.game__meta .user-link',
+      '.ruser-top .user-link',
+      '.tournament__standings .user-link',
+      '.standing .user-link',
+      '.user-show__header .user-link',
+      'h1.user-link',
+      '.mini-game__user .user-link',
+      '.featured-game .user-link',
+      '.lobby__spotlights .user-link',
+      '.swiss__player-info .user-link',
+      '.friend-list .user-link',
+      '.relation .user-link',
+      'a[href*="/@/"]',
+      '.text[data-href*="/@/"]',
+      'span.user-link'
+    ];
+
+    const allUserElements = document.querySelectorAll(selectors.join(','));
+    allUserElements.forEach((element) => {
+      const extractedUsername = this.extractUsername(element as HTMLElement);
+      if (extractedUsername?.toLowerCase() === usernameLC) {
+        elements.push(element as HTMLElement);
+      }
+    });
+
+    return elements;
+  }
+
+  /**
+   * Display picker result next to the username
+   */
+  private displayPickerResult(username: string, profile: any): void {
+    logger.info(`Displaying picker result for ${username}`);
+
+    // Find all elements with this username
+    const userElements = this.findUserElements(username);
+
+    userElements.forEach((element: HTMLElement) => {
+      // Skip if already has an indicator (check next sibling)
+      const nextSibling = element.nextElementSibling;
+      if (nextSibling?.classList?.contains('sus-meter-picker-indicator')) {
+        return;
+      }
+
+      // Also check if parent has an indicator for this username
+      const existingIndicator = element.parentElement?.querySelector(`.sus-meter-picker-indicator[data-username="${username}"]`);
+      if (existingIndicator) {
+        return;
+      }
+
+      // Use the button injector's styles and create indicator
+      this.buttonInjector.injectPickerIndicator(element, username, profile);
+    });
   }
 
   /**

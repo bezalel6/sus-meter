@@ -115,7 +115,41 @@ async function handleMessage(
       return await handleProfilesDetected(request.data, request.platform!);
 
     case 'ANALYZE_PROFILE':
-      return await analyzeProfile(request.username!, request.platform!);
+      const profile = await analyzeProfile(request.username!, request.platform!);
+
+      // If this came from content script (injected button), try to open popup
+      if (sender.tab?.id && profile) {
+        try {
+          // Try to send to popup if it's open
+          await browser.runtime.sendMessage({
+            type: 'PICKER_RESULT',
+            username: request.username,
+            platform: request.platform,
+            data: { profile }
+          });
+        } catch (error) {
+          // Popup is closed, store result and open popup
+          await browser.storage.local.set({
+            lastPickerResult: {
+              username: request.username,
+              platform: request.platform,
+              profile,
+              timestamp: Date.now()
+            }
+          });
+
+          // Try to open popup
+          try {
+            await browser.action.openPopup();
+          } catch (openError) {
+            // If can't open popup, set badge
+            await browser.action.setBadgeText({ text: '!', tabId: sender.tab.id });
+            await browser.action.setBadgeBackgroundColor({ color: '#667eea', tabId: sender.tab.id });
+          }
+        }
+      }
+
+      return { profile };
 
     case 'GET_CACHED_PROFILE':
       const cached = await CacheManager.getCachedProfile(request.username!, request.platform!);
@@ -159,6 +193,75 @@ async function handleMessage(
         }
       });
       return { success: true };
+
+    case 'PICKER_SELECTION':
+      // Handle picker selection from injected script
+      const { username, platform } = request;
+      if (!username || !platform) {
+        return { error: 'Username and platform are required' };
+      }
+      logger.info(`Picker selected: ${username} on ${platform}`);
+
+      // Store the analysis request
+      await browser.storage.local.set({
+        pendingPickerAnalysis: { username, platform, timestamp: Date.now() }
+      });
+
+      // Analyze the profile
+      const selectedProfile = await analyzeProfile(username, platform);
+
+      // Send the result back to the content script to display indicator
+      if (sender.tab?.id && selectedProfile) {
+        try {
+          await browser.tabs.sendMessage(sender.tab.id, {
+            type: 'DISPLAY_PICKER_RESULT',
+            username,
+            platform,
+            profile: selectedProfile
+          });
+          logger.debug('Picker result sent to content script for display');
+        } catch (error) {
+          logger.error('Failed to send result to content script:', error);
+        }
+      }
+
+      // Try to send result to popup if it's open
+      try {
+        await browser.runtime.sendMessage({
+          type: 'PICKER_RESULT',
+          username,
+          platform,
+          data: { profile: selectedProfile }
+        });
+        logger.debug('Picker result sent to popup');
+      } catch (error) {
+        // Popup is closed, store the result and open popup
+        logger.debug('Popup closed, storing result and opening popup');
+
+        await browser.storage.local.set({
+          lastPickerResult: {
+            username,
+            platform,
+            profile: selectedProfile,
+            timestamp: Date.now()
+          }
+        });
+
+        // Open the popup
+        try {
+          await browser.action.openPopup();
+          logger.debug('Popup opened to display results');
+        } catch (openError) {
+          // If openPopup is not supported (older browsers), update badge
+          logger.debug('Could not open popup automatically, updating badge');
+          if (sender.tab?.id) {
+            await browser.action.setBadgeText({ text: '!', tabId: sender.tab.id });
+            await browser.action.setBadgeBackgroundColor({ color: '#667eea', tabId: sender.tab.id });
+          }
+        }
+      }
+
+      return { success: true, profile: selectedProfile };
 
     default:
       logger.warn(`Unknown message type: ${request.type}`);

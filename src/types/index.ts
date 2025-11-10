@@ -24,6 +24,8 @@ export interface ChessProfile {
   };
   gameStats: {
     total: number;
+    rated?: number;
+    unrated?: number;
     wins: number;
     losses: number;
     draws: number;
@@ -70,9 +72,19 @@ export interface ExtensionSettings {
     alertOnSuspicious: boolean;
   };
   thresholds: {
-    newAccountDays: number;      // Default: 30 days
-    highRatingThreshold: number; // Default: 2000
-    minGamesRequired: number;    // Default: 50
+    // Single age cutoff
+    suspiciousAccountDays: number;   // Accounts younger than this are suspicious - Default: 30
+
+    // Performance thresholds
+    highRatingThreshold: number;     // Unusually high rating - Default: 2000
+    rapidRatingGainDays: number;     // Days to check for rapid rating gain - Default: 30
+    rapidRatingGainAmount: number;   // Rating gain threshold - Default: 300
+
+    // Game thresholds
+    minGamesRequired: number;        // Minimum games for established player - Default: 50
+    suspiciousWinRate: number;       // Win rate % that's suspicious - Default: 75
+
+    // Alert settings
     suspicionAlertLevel: SuspicionLevel;
   };
   appearance: {
@@ -107,7 +119,14 @@ export type MessageType =
   | 'ADD_TO_BLACKLIST'
   | 'REMOVE_FROM_WHITELIST'
   | 'REMOVE_FROM_BLACKLIST'
-  | 'GET_SETTINGS';
+  | 'GET_SETTINGS'
+  | 'INJECT_PROFILE_BUTTONS'
+  | 'INJECTION_COMPLETE'
+  | 'PICKER_SELECTION'
+  | 'PICKER_RESULT'
+  | 'POPUP_CHECK'
+  | 'CHECK_PICKER_MODE'
+  | 'DISPLAY_PICKER_RESULT';
 
 // Extension message structure
 export interface ExtensionMessage<T = any> {
@@ -116,6 +135,7 @@ export interface ExtensionMessage<T = any> {
   platform?: ChessPlatform;
   username?: string;
   timestamp?: number;
+  profile?: ChessProfile;
 }
 
 // Profile detection result
@@ -172,9 +192,19 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
     alertOnSuspicious: true,
   },
   thresholds: {
-    newAccountDays: 30,
+    // Single age cutoff
+    suspiciousAccountDays: 30,
+
+    // Performance thresholds
     highRatingThreshold: 2000,
+    rapidRatingGainDays: 30,
+    rapidRatingGainAmount: 300,
+
+    // Game thresholds
     minGamesRequired: 50,
+    suspiciousWinRate: 75,
+
+    // Alert settings
     suspicionAlertLevel: SuspicionLevel.HIGH,
   },
   appearance: {

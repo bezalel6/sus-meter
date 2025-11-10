@@ -65,6 +65,8 @@ export class ChessAPIClient {
 
       // Calculate game statistics
       const totalGames = data.count?.all || 0;
+      const ratedGames = data.count?.rated || 0;
+      const unratedGames = totalGames - ratedGames;
       const wins = data.count?.win || 0;
       const losses = data.count?.loss || 0;
       const draws = data.count?.draw || 0;
@@ -80,6 +82,8 @@ export class ChessAPIClient {
         peakRatings,
         gameStats: {
           total: totalGames,
+          rated: ratedGames,
+          unrated: unratedGames,
           wins,
           losses,
           draws,
@@ -171,13 +175,33 @@ export class ChessAPIClient {
 
       // Calculate total games
       let totalGames = 0;
+      let ratedGames = 0;
+      let unratedGames = 0;
       let totalWins = 0;
       let totalLosses = 0;
       let totalDraws = 0;
 
+      // Count rated games from standard time controls
       ['chess_bullet', 'chess_blitz', 'chess_rapid', 'chess_daily'].forEach(category => {
         if (statsData[category]?.record) {
           const record = statsData[category].record;
+          const categoryWins = record.win || 0;
+          const categoryLosses = record.loss || 0;
+          const categoryDraws = record.draw || 0;
+
+          totalWins += categoryWins;
+          totalLosses += categoryLosses;
+          totalDraws += categoryDraws;
+          ratedGames += categoryWins + categoryLosses + categoryDraws;
+        }
+      });
+
+      // Count unrated games (variants and puzzle rush)
+      ['chess960', 'chess3check', 'kingofthehill', 'crazyhouse'].forEach(variant => {
+        if (statsData[variant]?.record) {
+          const record = statsData[variant].record;
+          const variantGames = (record.win || 0) + (record.loss || 0) + (record.draw || 0);
+          unratedGames += variantGames;
           totalWins += record.win || 0;
           totalLosses += record.loss || 0;
           totalDraws += record.draw || 0;
@@ -197,6 +221,8 @@ export class ChessAPIClient {
         peakRatings,
         gameStats: {
           total: totalGames,
+          rated: ratedGames,
+          unrated: unratedGames,
           wins: totalWins,
           losses: totalLosses,
           draws: totalDraws,

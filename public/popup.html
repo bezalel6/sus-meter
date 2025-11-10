@@ -12,6 +12,7 @@
     <header>
       <h1>🔍 Sus Meter</h1>
       <p>Check Chess Profile Age & Stats</p>
+      <button id="settings-btn" class="settings-button" title="Settings">⚙️</button>
     </header>
 
     <!-- Search Form -->
@@ -35,6 +36,21 @@
           Check
         </button>
       </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="inject-section">
+      <div class="action-buttons">
+        <button id="inject-btn" class="inject-button">
+          <span class="inject-icon">⚡</span>
+          <span>Analyze All</span>
+        </button>
+        <button id="picker-btn" class="picker-button">
+          <span class="picker-icon">🎯</span>
+          <span>Pick Profile</span>
+        </button>
+      </div>
+      <div id="inject-status" class="inject-status hidden"></div>
     </div>
 
     <!-- Loading State -->
@@ -101,6 +117,48 @@
         <button id="clear-history" class="clear-btn">Clear</button>
       </div>
       <div id="history-list" class="history-list"></div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="settings-panel hidden">
+      <div class="settings-header">
+        <h3>⚙️ Settings</h3>
+        <button id="close-settings" class="close-btn">✕</button>
+      </div>
+      <div class="settings-content">
+        <div class="settings-section">
+          <h4>Age Threshold</h4>
+          <div class="setting-item">
+            <label for="suspicious-days">Suspicious Account Age (days)</label>
+            <input type="number" id="suspicious-days" min="1" max="365" />
+            <span class="setting-hint">Accounts younger than this are marked as suspicious</span>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4>Performance Thresholds</h4>
+          <div class="setting-item">
+            <label for="high-rating">High Rating Threshold</label>
+            <input type="number" id="high-rating" min="1000" max="3000" step="100" />
+            <span class="setting-hint">Unusually high rating for new accounts</span>
+          </div>
+          <div class="setting-item">
+            <label for="min-games">Minimum Games Required</label>
+            <input type="number" id="min-games" min="0" max="1000" />
+            <span class="setting-hint">Minimum games for established player</span>
+          </div>
+          <div class="setting-item">
+            <label for="win-rate">Suspicious Win Rate (%)</label>
+            <input type="number" id="win-rate" min="50" max="100" />
+            <span class="setting-hint">Win rate percentage that triggers suspicion</span>
+          </div>
+        </div>
+
+        <div class="settings-actions">
+          <button id="save-settings" class="save-btn">Save Settings</button>
+          <button id="reset-settings" class="reset-btn">Reset to Defaults</button>
+        </div>
+      </div>
     </div>
   </div>
 

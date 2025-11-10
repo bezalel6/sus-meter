@@ -1,4 +1,4 @@
-import { ChessProfile, SuspicionLevel } from '@/types';
+import { ChessProfile, SuspicionLevel, ExtensionSettings, DEFAULT_SETTINGS } from '@/types';
 import { createLogger } from './logger';
 
 const logger = createLogger('ProfileAnalyzer');
@@ -7,6 +7,7 @@ const logger = createLogger('ProfileAnalyzer');
  * Analyzes a chess profile and calculates suspicion metrics
  */
 export class ProfileAnalyzer {
+  private static settings = DEFAULT_SETTINGS;
   /**
    * Calculate overall suspicion score (0-100) - with primary focus on account age
    */
@@ -62,9 +63,10 @@ export class ProfileAnalyzer {
    */
   private static calculateAccountAgeScore(profile: ChessProfile): { score: number; reason?: string } {
     const { accountAge } = profile;
+    const suspiciousThreshold = this.settings.thresholds.suspiciousAccountDays;
 
-    // Brand new account with high rating
-    if (accountAge <= 3) {
+    // Check if account is suspicious based on age
+    if (accountAge < suspiciousThreshold) {
       const highestRating = Math.max(
         profile.ratings.bullet || 0,
         profile.ratings.blitz || 0,
@@ -72,46 +74,23 @@ export class ProfileAnalyzer {
         profile.ratings.classical || 0
       );
 
-      if (highestRating > 2200) {
-        return { score: 30, reason: `Very new account (${accountAge} days) with ${highestRating} rating` };
-      } else if (highestRating > 1800) {
-        return { score: 20, reason: `New account (${accountAge} days) with ${highestRating} rating` };
-      }
-    }
+      // Calculate score based on how new the account is relative to threshold
+      const ageRatio = accountAge / suspiciousThreshold;
+      let baseScore = 30 * (1 - ageRatio); // Max 30 points for brand new account
 
-    // Week old account
-    if (accountAge <= 7) {
-      const highestRating = Math.max(
-        profile.ratings.blitz || 0,
-        profile.ratings.rapid || 0
-      );
-
-      if (highestRating > 2000) {
-        return { score: 25, reason: `Week-old account with ${highestRating} rating` };
+      // Add extra suspicion for high ratings
+      if (highestRating > this.settings.thresholds.highRatingThreshold) {
+        baseScore += 10;
+        return { score: baseScore, reason: `New account (${accountAge} days) with high rating (${highestRating})` };
       } else if (highestRating > 1700) {
-        return { score: 15, reason: `Recent account with strong rating` };
+        baseScore += 5;
+        return { score: baseScore, reason: `New account (${accountAge} days) with ${highestRating} rating` };
       }
-    }
 
-    // Month old account
-    if (accountAge <= 30) {
-      const highestRating = Math.max(
-        profile.ratings.blitz || 0,
-        profile.ratings.rapid || 0
-      );
-
-      if (highestRating > 2400) {
-        return { score: 15, reason: `Young account (${accountAge} days) with master-level rating` };
-      } else if (highestRating > 2200) {
-        return { score: 10, reason: `Month-old account with expert rating` };
-      }
+      return { score: baseScore, reason: `Account only ${accountAge} days old` };
     }
 
     // Established account
-    if (accountAge > 180) {
-      return { score: 0 };
-    }
-
     return { score: 0 };
   }
 
@@ -127,16 +106,19 @@ export class ProfileAnalyzer {
       profile.ratings.classical || 0
     );
 
+    const minGames = this.settings.thresholds.minGamesRequired;
+    const highRatingThreshold = this.settings.thresholds.highRatingThreshold;
+
     // Very few games with high rating
-    if (totalGames < 30 && highestRating > 2000) {
+    if (totalGames < minGames && highestRating > highRatingThreshold) {
       return { score: 25, reason: `Only ${totalGames} games with ${highestRating} rating` };
     }
 
-    if (totalGames < 50 && highestRating > 1800) {
+    if (totalGames < minGames * 0.6 && highestRating > 1800) {
       return { score: 20, reason: `Few games (${totalGames}) for ${highestRating} rating` };
     }
 
-    if (totalGames < 100 && highestRating > 2200) {
+    if (totalGames < minGames * 2 && highestRating > 2200) {
       return { score: 15, reason: `Low game count for master-level rating` };
     }
 
@@ -155,6 +137,7 @@ export class ProfileAnalyzer {
   private static calculateWinRateScore(profile: ChessProfile): { score: number; reason?: string } {
     const winRate = profile.gameStats.winRate;
     const totalGames = profile.gameStats.total;
+    const suspiciousWinRate = this.settings.thresholds.suspiciousWinRate;
 
     // Extremely high win rate with significant games
     if (winRate > 85 && totalGames > 20) {
@@ -165,7 +148,7 @@ export class ProfileAnalyzer {
       return { score: 15, reason: `Very high win rate: ${winRate}%` };
     }
 
-    if (winRate > 75 && totalGames > 100) {
+    if (winRate > suspiciousWinRate && totalGames > 100) {
       return { score: 10, reason: `Unusually high win rate: ${winRate}%` };
     }
 
@@ -242,9 +225,23 @@ export class ProfileAnalyzer {
   }
 
   /**
+   * Update settings for the analyzer
+   */
+  static updateSettings(settings: Partial<ExtensionSettings>) {
+    if (settings.thresholds) {
+      this.settings.thresholds = { ...this.settings.thresholds, ...settings.thresholds };
+    }
+  }
+
+  /**
    * Analyze profile and return complete analysis
    */
-  static analyzeProfile(profile: ChessProfile): ChessProfile {
+  static analyzeProfile(profile: ChessProfile, settings?: Partial<ExtensionSettings>): ChessProfile {
+    // Update settings if provided
+    if (settings) {
+      this.updateSettings(settings);
+    }
+
     // Calculate suspicion score
     const suspicionScore = this.calculateSuspicionScore(profile);
     profile.suspicionScore = suspicionScore;
