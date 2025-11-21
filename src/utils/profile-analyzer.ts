@@ -259,14 +259,14 @@ export class ProfileAnalyzer {
   } {
     const { accountStatus } = profile;
 
-    // Already flagged by platform
+    // Already flagged by platform - MAXIMUM SUSPICION
     if (accountStatus.isViolator || accountStatus.isClosed) {
-      return { score: 10, reason: 'Account flagged by platform' };
+      return { score: 70, reason: '🚨 Account flagged by platform' };
     }
 
-    // Fair play concerns (Chess.com)
+    // Fair play concerns (Chess.com) - VERY HIGH SUSPICION
     if (accountStatus.isFairPlay === false) {
-      return { score: 8, reason: 'Fair play violations detected' };
+      return { score: 60, reason: '⚠️ Fair play violations detected' };
     }
 
     // Verified accounts get negative score (more trustworthy)
