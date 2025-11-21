@@ -29,38 +29,48 @@ export class ProfileInjector {
     const style = document.createElement('style');
     style.id = 'sus-meter-styles';
     style.textContent = `
-      /* Badge styles */
+      /* Badge styles - larger and easier to click */
       .sus-meter-badge {
         display: inline-block;
-        width: 8px;
-        height: 8px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
-        margin-left: 4px;
-        margin-right: 2px;
+        margin-left: 6px;
+        margin-right: 4px;
         vertical-align: middle;
-        cursor: help;
+        cursor: pointer;
         position: relative;
         animation: sus-meter-fade-in 0.3s ease-in;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        /* Add larger clickable area */
+        padding: 4px;
+        margin: -4px 2px -4px 2px;
+        box-sizing: content-box;
+      }
+
+      .sus-meter-badge:hover {
+        transform: scale(1.2);
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
       }
 
       .sus-meter-badge.badge-small {
-        width: 6px;
-        height: 6px;
-      }
-
-      .sus-meter-badge.badge-medium {
-        width: 8px;
-        height: 8px;
-      }
-
-      .sus-meter-badge.badge-large {
         width: 10px;
         height: 10px;
       }
 
+      .sus-meter-badge.badge-medium {
+        width: 12px;
+        height: 12px;
+      }
+
+      .sus-meter-badge.badge-large {
+        width: 14px;
+        height: 14px;
+      }
+
       .sus-meter-badge.badge-before {
         margin-left: 2px;
-        margin-right: 4px;
+        margin-right: 6px;
       }
 
       /* Hover card styles */
@@ -219,55 +229,112 @@ export class ProfileInjector {
 
     if (this.platform === 'lichess') {
       selectors = [
+        // Direct user link classes
         '.user-link',
+        'span.user-link',
+        'h1.user-link',
+        'a.user-link',
+
+        // Href-based selectors (broad)
         'a[href*="/@/"]',
+        '[data-href*="/@/"]',
+
+        // Chat contexts
         '.mchat__messages a',
         '.chat__messages a',
+        '.mchat a[href]',
+        '.chat a[href]',
+
+        // Game contexts
         '.game__meta a',
         '.ruser-top a',
+        '.ruser a',
+        '.player a[href]',
+
+        // Tournament contexts
         '.tournament__standings a',
         '.standing a',
-        '.user-show__header a',
-        'h1.user-link',
-        '.mini-game__user a',
-        '.featured-game a',
-        '.lobby__spotlights a',
+        '.tournament a[href*="/@/"]',
         '.swiss__player-info a',
+        '.arena a[href]',
+
+        // Lobby and featured
+        '.lobby__spotlights a',
+        '.featured-game a',
+        '.mini-game__user a',
+        '.mini-game a[href]',
+
+        // Profile and social
+        '.user-show__header a',
         '.friend-list a',
         '.relation a',
-        'span.user-link',
-        '.text[data-href*="/@/"]',
+
+        // Catch-all for any link with user pattern
+        'a[href^="/@/"]',
+        'a[href^="/player/"]',
       ];
     } else {
       // chess.com
       selectors = [
+        // Username components (various classes)
         '.user-username-component',
         '.username-component',
+        '.user-tagline-username',
+        '[class*="username"]',
+        '[class*="user-username"]',
+
+        // Data attribute selectors
+        '[data-username]',
+        '[data-user]',
+
+        // Href-based selectors (broad)
         'a[href*="/member/"]',
         'a[href*="/players/"]',
         'a[href*="/profile/"]',
+        'a[href^="/member/"]',
+        'a[href^="/players/"]',
+
+        // Chat contexts
         '.chat-message-component a',
         '.live-chat-message a',
         '.chat-message a',
+        '[class*="chat"] a[href*="/member/"]',
+
+        // Game contexts
         '.player-component a',
         '.player-tagline a',
         '.game-player-name a',
         '.board-player-userinfo a',
+        '[class*="player"] a[href]',
+
+        // Tournament contexts
         '.tournament-players-table a',
         '.arena-leaderboard a',
         '.tournament-player-row a',
+        '[class*="tournament"] a[href*="/member/"]',
+        '[class*="leaderboard"] a[href]',
+
+        // Profile contexts
         '.profile-header-username',
         '.profile-card-username a',
         '.member-header-username',
+        '[class*="profile"] [class*="username"]',
+
+        // Social contexts
         '.friends-list a',
         '.club-members a',
         '.connections-user-item a',
+
+        // Game lists and lobby
         '.seekers-table a',
         '.games-list-item a',
         '.live-game-item a',
+        '[class*="game-item"] a[href]',
+
+        // Analysis
         '.analysis-player-info a',
         '.game-review-player a',
-        '[data-username]',
+        '[class*="analysis"] a[href*="/member/"]',
       ];
     }
 

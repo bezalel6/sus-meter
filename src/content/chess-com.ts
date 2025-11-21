@@ -216,126 +216,54 @@ export class ChessComProfileDetector {
   private findProfileElements(): ProfileDetection[] {
     const profiles: ProfileDetection[] = [];
 
-    // Chat messages - usernames in live chat
-    const chatUsers = document.querySelectorAll(
-      '.chat-message-component .username-component, ' +
-        '.live-chat-message .username, ' +
-        '.chat-message .user-username-component',
-    );
-    chatUsers.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'chat',
-          platform,
-        });
-      }
-    });
+    // Comprehensive selector matching CSS detection selectors
+    const selector = [
+      '.user-username-component',
+      '.username-component',
+      '[class*="username"]',
+      '[data-username]',
+      '[data-user]',
+      'a[href*="/member/"]',
+      'a[href*="/players/"]',
+      'a[href*="/profile/"]',
+      'a[href^="/member/"]',
+      'a[href^="/players/"]',
+      '.chat-message-component a',
+      '.live-chat-message a',
+      '.chat-message a',
+      '.player-component a',
+      '.player-tagline a',
+      '.game-player-name a',
+      '.board-player-userinfo a',
+      '.tournament-players-table a',
+      '.arena-leaderboard a',
+      '.tournament-player-row a',
+      '.profile-header-username',
+      '.profile-card-username a',
+      '.member-header-username',
+      '.friends-list a',
+      '.club-members a',
+      '.connections-user-item a',
+      '.seekers-table a',
+      '.games-list-item a',
+      '.live-game-item a',
+      '.analysis-player-info a',
+      '.game-review-player a',
+      '[class*="player"] a[href]',
+      '[class*="tournament"] a[href*="/member/"]',
+      '[class*="game-item"] a[href]',
+    ].join(', ');
 
-    // Game pages - player names in live and daily games
-    const gamePlayers = document.querySelectorAll(
-      '.player-component .user-username-component, ' +
-        '.player-tagline .user-username-component, ' +
-        '.game-player-name .username, ' +
-        '.board-player-userinfo .user-username-link',
-    );
-    gamePlayers.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'game',
-          platform,
-        });
-      }
-    });
+    const allElements = document.querySelectorAll(selector);
 
-    // Tournament pages and arenas
-    const tournamentPlayers = document.querySelectorAll(
-      '.tournament-players-table .user-username-component, ' +
-        '.arena-leaderboard .user-username-component, ' +
-        '.tournament-player-row .username',
-    );
-    tournamentPlayers.forEach((element) => {
+    allElements.forEach((element) => {
       const username = this.extractUsername(element as HTMLElement);
       if (username) {
+        const context = this.determineContext(element as HTMLElement);
         profiles.push({
           element: element as HTMLElement,
           username,
-          context: 'tournament',
-          platform,
-        });
-      }
-    });
-
-    // Profile pages
-    const profileHeaders = document.querySelectorAll(
-      '.profile-header-username, ' +
-        '.profile-card-username .user-username-component, ' +
-        '.member-header-username',
-    );
-    profileHeaders.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'profile',
-          platform,
-        });
-      }
-    });
-
-    // Friends list and clubs
-    const friendsList = document.querySelectorAll(
-      '.friends-list .user-username-component, ' +
-        '.club-members .user-username-component, ' +
-        '.connections-user-item .username',
-    );
-    friendsList.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'list',
-          platform,
-        });
-      }
-    });
-
-    // Live chess lobby and game lists
-    const lobbyPlayers = document.querySelectorAll(
-      '.seekers-table .user-username-component, ' +
-        '.games-list-item .user-username-component, ' +
-        '.live-game-item .username',
-    );
-    lobbyPlayers.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'list',
-          platform,
-        });
-      }
-    });
-
-    // Analysis board and game review
-    const analysisPlayers = document.querySelectorAll(
-      '.analysis-player-info .user-username-component, ' + '.game-review-player .username',
-    );
-    analysisPlayers.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'game',
+          context,
           platform,
         });
       }

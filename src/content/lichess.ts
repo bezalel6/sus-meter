@@ -206,107 +206,43 @@ export class LichessProfileDetector {
   private findProfileElements(): ProfileDetection[] {
     const profiles: ProfileDetection[] = [];
 
-    // Chat messages - usernames in chat
-    const chatUsers = document.querySelectorAll(
-      '.mchat__messages .user-link, .chat__messages .user-link',
-    );
-    chatUsers.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'chat',
-          platform,
-        });
-      }
-    });
+    // Comprehensive selector matching CSS detection selectors
+    const selector = [
+      '.user-link',
+      'a[href*="/@/"]',
+      'a[href^="/@/"]',
+      '[data-href*="/@/"]',
+      '.mchat a[href]',
+      '.chat a[href]',
+      '.game__meta a',
+      '.ruser-top a',
+      '.ruser a',
+      '.tournament__standings a',
+      '.standing a',
+      '.user-show__header a',
+      'h1.user-link',
+      '.mini-game__user a',
+      '.featured-game a',
+      '.lobby__spotlights a',
+      '.swiss__player-info a',
+      '.friend-list a',
+      '.relation a',
+      '.mini-game a[href]',
+      '.tournament a[href*="/@/"]',
+      '.arena a[href]',
+      '.player a[href]',
+    ].join(', ');
 
-    // Game pages - player names
-    const gamePlayers = document.querySelectorAll('.game__meta .user-link, .ruser-top .user-link');
-    gamePlayers.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'game',
-          platform,
-        });
-      }
-    });
+    const allElements = document.querySelectorAll(selector);
 
-    // Tournament pages
-    const tournamentPlayers = document.querySelectorAll(
-      '.tournament__standings .user-link, .standing .user-link',
-    );
-    tournamentPlayers.forEach((element) => {
+    allElements.forEach((element) => {
       const username = this.extractUsername(element as HTMLElement);
       if (username) {
+        const context = this.determineContext(element as HTMLElement);
         profiles.push({
           element: element as HTMLElement,
           username,
-          context: 'tournament',
-          platform,
-        });
-      }
-    });
-
-    // Profile pages
-    const profileHeaders = document.querySelectorAll('.user-show__header .user-link, h1.user-link');
-    profileHeaders.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'profile',
-          platform,
-        });
-      }
-    });
-
-    // TV games and featured games
-    const tvPlayers = document.querySelectorAll(
-      '.mini-game__user .user-link, .featured-game .user-link',
-    );
-    tvPlayers.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'game',
-          platform,
-        });
-      }
-    });
-
-    // Arena/Swiss tournament lobbies
-    const lobbyPlayers = document.querySelectorAll(
-      '.lobby__spotlights .user-link, .swiss__player-info .user-link',
-    );
-    lobbyPlayers.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'tournament',
-          platform,
-        });
-      }
-    });
-
-    // Friend list and follows
-    const friendsList = document.querySelectorAll('.friend-list .user-link, .relation .user-link');
-    friendsList.forEach((element) => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'list',
+          context,
           platform,
         });
       }
