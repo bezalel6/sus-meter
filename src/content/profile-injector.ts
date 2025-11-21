@@ -202,6 +202,17 @@ export class ProfileInjector {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.6; }
       }
+
+      /* Loading badge - shows while analysis is in progress */
+      .sus-meter-badge.loading {
+        background-color: #9e9e9e !important;
+        animation: sus-meter-loading-pulse 1.5s ease-in-out infinite !important;
+      }
+
+      @keyframes sus-meter-loading-pulse {
+        0%, 100% { opacity: 0.5; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.1); }
+      }
     `;
 
     document.head.appendChild(style);
@@ -357,28 +368,63 @@ export class ProfileInjector {
   }
 
   /**
-   * Inject a badge and age indicator next to a username element
+   * Inject a loading badge immediately when profile is detected
    */
-  injectBadge(element: HTMLElement, profile: ChessProfile): void {
-    // Don't inject twice
+  injectLoadingBadge(element: HTMLElement, username: string): void {
+    // Don't inject if already has any badge
     if (this.injectedElements.has(element)) {
       return;
     }
 
     // Check if badge already exists
-    const existingBadge = element.parentElement?.querySelector('.sus-meter-badge');
-    const existingAge = element.parentElement?.querySelector('.sus-meter-age-text');
-    if (existingBadge) {
-      existingBadge.remove();
-    }
-    if (existingAge) {
-      existingAge.remove();
+    const existingContainer = element.parentElement?.querySelector('.sus-meter-container');
+    if (existingContainer) {
+      return;
     }
 
-    // Create container for badge and optional age text
+    // Create container
     const container = document.createElement('span');
     container.className = 'sus-meter-container';
     container.style.cssText = 'display: inline-flex; align-items: center; gap: 4px;';
+    container.dataset['username'] = username; // Store username for later update
+
+    // Create loading badge
+    const badge = document.createElement('span');
+    badge.className = `sus-meter-badge loading badge-${this.settings.appearance?.badgeSize || 'small'}`;
+    badge.title = `Analyzing ${username}...`;
+
+    container.appendChild(badge);
+
+    // Insert container
+    if (this.settings.appearance?.badgePosition === 'before') {
+      element.parentElement?.insertBefore(container, element);
+    } else {
+      element.parentElement?.insertBefore(container, element.nextSibling);
+    }
+
+    this.injectedElements.add(element);
+    logger.debug(`Injected loading badge for ${username}`);
+  }
+
+  /**
+   * Inject a badge and age indicator next to a username element
+   */
+  injectBadge(element: HTMLElement, profile: ChessProfile): void {
+    // Check if there's an existing container (from loading badge)
+    let container = element.parentElement?.querySelector(
+      `.sus-meter-container[data-username="${profile.username}"]`,
+    ) as HTMLElement | null;
+
+    // If container exists, clear it and reuse
+    if (container) {
+      container.innerHTML = '';
+    } else {
+      // Create new container
+      container = document.createElement('span');
+      container.className = 'sus-meter-container';
+      container.style.cssText = 'display: inline-flex; align-items: center; gap: 4px;';
+      container.dataset['username'] = profile.username;
+    }
 
     // Create badge element
     const badge = document.createElement('span');
@@ -436,11 +482,13 @@ export class ProfileInjector {
       element.addEventListener('mouseleave', () => this.hideHoverCard());
     }
 
-    // Insert container
-    if (this.settings.appearance?.badgePosition === 'before') {
-      element.parentElement?.insertBefore(container, element);
-    } else {
-      element.parentElement?.insertBefore(container, element.nextSibling);
+    // Insert container only if it's new (not updating from loading badge)
+    if (!container.parentElement) {
+      if (this.settings.appearance?.badgePosition === 'before') {
+        element.parentElement?.insertBefore(container, element);
+      } else {
+        element.parentElement?.insertBefore(container, element.nextSibling);
+      }
     }
 
     this.injectedElements.add(element);

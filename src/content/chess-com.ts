@@ -325,6 +325,11 @@ export class ChessComProfileDetector {
   private async processProfiles(profiles: ProfileDetection[]): Promise<void> {
     logger.debug(`Processing ${profiles.length} new profiles`);
 
+    // Inject loading badges immediately for instant feedback
+    profiles.forEach((detection) => {
+      this.injector.injectLoadingBadge(detection.element, detection.username);
+    });
+
     // Send profiles to background script for analysis
     const message: ExtensionMessage = {
       type: 'PROFILES_DETECTED',
@@ -339,7 +344,7 @@ export class ChessComProfileDetector {
       const response = (await browser.runtime.sendMessage(message)) as any;
 
       if (response && response.profiles) {
-        // Inject badges for analyzed profiles
+        // Update badges with analyzed profile data
         profiles.forEach((detection) => {
           const profileData = response.profiles[detection.username];
           if (profileData) {
