@@ -39,6 +39,7 @@ export class ProfileInjector {
         vertical-align: middle;
         cursor: pointer;
         position: relative;
+        background-color: transparent !important; /* Container is invisible */
         /* Wide clickable area via padding */
         padding: 6px;
         margin: -6px 2px -6px 2px;
@@ -55,7 +56,7 @@ export class ProfileInjector {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background-color: inherit;
+        background-color: var(--badge-color, #9e9e9e); /* Use CSS variable for color */
         animation: sus-meter-fade-in 0.3s ease-in;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
@@ -217,7 +218,7 @@ export class ProfileInjector {
 
       /* Loading badge - shows while analysis is in progress */
       .sus-meter-badge.loading {
-        background-color: #9e9e9e !important;
+        --badge-color: #9e9e9e;
       }
 
       .sus-meter-badge.loading::before {
@@ -450,7 +451,7 @@ export class ProfileInjector {
     // Create badge element
     const badge = document.createElement('span');
     badge.className = `sus-meter-badge badge-${this.settings.appearance?.badgeSize || 'small'} level-${profile.suspicionLevel}`;
-    badge.style.backgroundColor = BADGE_COLORS[profile.suspicionLevel];
+    badge.style.setProperty('--badge-color', BADGE_COLORS[profile.suspicionLevel]);
     badge.title = this.getBadgeTooltip(profile);
 
     // Create age text indicator for new accounts
