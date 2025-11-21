@@ -1,4 +1,4 @@
-import { ChessProfile, ChessPlatform } from '@/types';
+import type { ChessProfile, ChessPlatform } from '@/types';
 import { ChessAPIClient, ProfileAnalyzer, CacheManager } from '@/utils';
 
 /**
@@ -358,9 +358,8 @@ export class ProfileButtonInjector {
     const profile: ChessProfile = JSON.parse(button.dataset['profile']);
 
     // Build tooltip content
-    const ageClass = profile.accountAge < 7 ? 'new' :
-                     profile.accountAge < 30 ? 'recent' :
-                     'established';
+    const ageClass =
+      profile.accountAge < 7 ? 'new' : profile.accountAge < 30 ? 'recent' : 'established';
 
     const ageText = this.formatAge(profile.accountAge);
 
@@ -377,18 +376,26 @@ export class ProfileButtonInjector {
         <span class="stat-label">Total Games:</span>
         <span class="stat-value">${profile.gameStats.total.toLocaleString()}</span>
       </div>
-      ${profile.gameStats.rated !== undefined ? `
+      ${
+        profile.gameStats.rated !== undefined
+          ? `
         <div class="stat-row" style="padding-left: 12px;">
           <span class="stat-label" style="font-size: 11px;">Rated:</span>
           <span class="stat-value" style="font-size: 11px;">${profile.gameStats.rated.toLocaleString()}</span>
         </div>
-      ` : ''}
-      ${profile.gameStats.unrated !== undefined ? `
+      `
+          : ''
+      }
+      ${
+        profile.gameStats.unrated !== undefined
+          ? `
         <div class="stat-row" style="padding-left: 12px;">
           <span class="stat-label" style="font-size: 11px;">Unrated:</span>
           <span class="stat-value" style="font-size: 11px;">${profile.gameStats.unrated.toLocaleString()}</span>
         </div>
-      ` : ''}
+      `
+          : ''
+      }
       <div class="stat-row">
         <span class="stat-label">Win Rate:</span>
         <span class="stat-value">${profile.gameStats.winRate}%</span>
@@ -405,7 +412,7 @@ export class ProfileButtonInjector {
         <div class="suspicion-reasons">
           <strong>Flags:</strong>
           <ul>
-            ${profile.suspicionReasons.map(r => `<li>${r}</li>`).join('')}
+            ${profile.suspicionReasons.map((r) => `<li>${r}</li>`).join('')}
           </ul>
         </div>
       `;
@@ -418,7 +425,7 @@ export class ProfileButtonInjector {
     const tooltipRect = this.tooltipElement.getBoundingClientRect();
 
     let top = rect.bottom + 8;
-    let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+    let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
 
     // Adjust if going off screen
     if (left < 10) left = 10;
@@ -537,36 +544,56 @@ export class ProfileButtonInjector {
           <span style="color: #6b7280;">Account Age:</span>
           <span style="font-weight: 500;">${this.formatAge(profile.accountAge)}</span>
         </div>
-        ${profile.ratings ? `
+        ${
+          profile.ratings
+            ? `
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #6b7280;">Rating:</span>
             <span style="font-weight: 500;">${profile.ratings.blitz || profile.ratings.rapid || 'N/A'}</span>
           </div>
-        ` : ''}
-        ${profile.gameStats ? `
+        `
+            : ''
+        }
+        ${
+          profile.gameStats
+            ? `
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #6b7280;">Total Games:</span>
             <span style="font-weight: 500;">${profile.gameStats.total || 0}</span>
           </div>
-          ${profile.gameStats.rated !== undefined ? `
+          ${
+            profile.gameStats.rated !== undefined
+              ? `
             <div style="display: flex; justify-content: space-between; padding-left: 12px;">
               <span style="color: #9ca3af; font-size: 12px;">Rated:</span>
               <span style="font-weight: 500; font-size: 12px;">${profile.gameStats.rated || 0}</span>
             </div>
-          ` : ''}
-          ${profile.gameStats.unrated !== undefined ? `
+          `
+              : ''
+          }
+          ${
+            profile.gameStats.unrated !== undefined
+              ? `
             <div style="display: flex; justify-content: space-between; padding-left: 12px;">
               <span style="color: #9ca3af; font-size: 12px;">Unrated:</span>
               <span style="font-weight: 500; font-size: 12px;">${profile.gameStats.unrated || 0}</span>
             </div>
-          ` : ''}
-        ` : ''}
-        ${profile.suspicionLevel ? `
+          `
+              : ''
+          }
+        `
+            : ''
+        }
+        ${
+          profile.suspicionLevel
+            ? `
           <div style="display: flex; justify-content: space-between;">
             <span style="color: #6b7280;">Status:</span>
             <span style="font-weight: 500; text-transform: capitalize;">${profile.suspicionLevel}</span>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     `;
 
@@ -578,7 +605,7 @@ export class ProfileButtonInjector {
       const isVisible = infoPanel.style.display === 'block';
 
       // Hide all other panels
-      document.querySelectorAll('.sus-meter-info-panel').forEach(panel => {
+      document.querySelectorAll('.sus-meter-info-panel').forEach((panel) => {
         (panel as HTMLElement).style.display = 'none';
       });
 

@@ -65,8 +65,7 @@ class Logger {
 // Factory function to create loggers for different contexts
 export function createLogger(context: string, level?: LogLevel): Logger {
   // In development, use DEBUG level, in production use INFO
-  const defaultLevel =
-    process.env['NODE_ENV'] === 'development' ? LogLevel.DEBUG : LogLevel.INFO;
+  const defaultLevel = process.env['NODE_ENV'] === 'development' ? LogLevel.DEBUG : LogLevel.INFO;
   return new Logger(context, level ?? defaultLevel);
 }
 

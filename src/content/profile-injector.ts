@@ -1,4 +1,5 @@
-import { ChessProfile, ChessPlatform, BADGE_COLORS, ExtensionSettings } from '@/types';
+import type { ChessProfile, ChessPlatform, ExtensionSettings } from '@/types';
+import { BADGE_COLORS } from '@/types';
 import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('ProfileInjector');
@@ -12,9 +13,9 @@ export class ProfileInjector {
   private hoverCardElement: HTMLElement | null = null;
   private hoverTimeout: number | null = null;
 
-  constructor(_platform: ChessPlatform) {
-    // Platform passed in but not currently used
+  constructor(private platform: ChessPlatform) {
     this.injectStyles();
+    this.injectDetectionStyles();
   }
 
   /**
@@ -198,6 +199,97 @@ export class ProfileInjector {
   }
 
   /**
+   * Inject CSS detection animation styles for element appearance detection
+   * Uses CSS animation trick to detect when elements matching selectors are added to DOM
+   */
+  private injectDetectionStyles(): void {
+    if (document.getElementById('sus-meter-detection-styles')) {
+      return; // Already injected
+    }
+
+    const style = document.createElement('style');
+    style.id = 'sus-meter-detection-styles';
+
+    // Use a minimal, non-visual animation with unique name
+    const animationName = 'sus-meter-detect';
+    const animation = `${animationName} 0.001s`;
+
+    // Platform-specific selectors
+    let selectors: string[];
+
+    if (this.platform === 'lichess') {
+      selectors = [
+        '.user-link',
+        'a[href*="/@/"]',
+        '.mchat__messages a',
+        '.chat__messages a',
+        '.game__meta a',
+        '.ruser-top a',
+        '.tournament__standings a',
+        '.standing a',
+        '.user-show__header a',
+        'h1.user-link',
+        '.mini-game__user a',
+        '.featured-game a',
+        '.lobby__spotlights a',
+        '.swiss__player-info a',
+        '.friend-list a',
+        '.relation a',
+        'span.user-link',
+        '.text[data-href*="/@/"]',
+      ];
+    } else {
+      // chess.com
+      selectors = [
+        '.user-username-component',
+        '.username-component',
+        'a[href*="/member/"]',
+        'a[href*="/players/"]',
+        'a[href*="/profile/"]',
+        '.chat-message-component a',
+        '.live-chat-message a',
+        '.chat-message a',
+        '.player-component a',
+        '.player-tagline a',
+        '.game-player-name a',
+        '.board-player-userinfo a',
+        '.tournament-players-table a',
+        '.arena-leaderboard a',
+        '.tournament-player-row a',
+        '.profile-header-username',
+        '.profile-card-username a',
+        '.member-header-username',
+        '.friends-list a',
+        '.club-members a',
+        '.connections-user-item a',
+        '.seekers-table a',
+        '.games-list-item a',
+        '.live-game-item a',
+        '.analysis-player-info a',
+        '.game-review-player a',
+        '[data-username]',
+      ];
+    }
+
+    // Create CSS content with keyframes and selectors
+    style.textContent = `
+      /* Detection keyframes - minimal, non-visual animation */
+      @keyframes ${animationName} {
+        from { clip-path: inset(0 0 0 0); }
+        to { clip-path: inset(0 0 0 0); }
+      }
+
+      /* Apply animation to target selectors */
+      ${selectors.join(',\n      ')} {
+        animation: ${animation} !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+    logger.debug(`Injected CSS detection styles for ${this.platform}`);
+  }
+
+  /**
    * Inject a badge and age indicator next to a username element
    */
   injectBadge(element: HTMLElement, profile: ChessProfile): void {
@@ -247,7 +339,8 @@ export class ProfileInjector {
       }
 
       // Style the age text based on how new the account is
-      const textColor = profile.accountAge < 7 ? '#d32f2f' : profile.accountAge < 14 ? '#f57c00' : '#795548';
+      const textColor =
+        profile.accountAge < 7 ? '#d32f2f' : profile.accountAge < 14 ? '#f57c00' : '#795548';
       ageText.style.cssText = `
         font-size: 10px;
         font-weight: 600;
@@ -284,7 +377,9 @@ export class ProfileInjector {
     }
 
     this.injectedElements.add(element);
-    logger.debug(`Injected badge for ${profile.username} (${profile.suspicionLevel}, ${profile.accountAge} days old)`);
+    logger.debug(
+      `Injected badge for ${profile.username} (${profile.suspicionLevel}, ${profile.accountAge} days old)`,
+    );
   }
 
   /**
@@ -351,7 +446,10 @@ export class ProfileInjector {
     card.className = 'sus-meter-hover-card';
 
     // Check for dark mode
-    if (document.body.classList.contains('dark-mode') || document.body.classList.contains('theme-dark')) {
+    if (
+      document.body.classList.contains('dark-mode') ||
+      document.body.classList.contains('theme-dark')
+    ) {
       card.classList.add('dark-mode');
     }
 
@@ -405,15 +503,20 @@ export class ProfileInjector {
     const dateString = createdDate.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
 
     const levelColor = BADGE_COLORS[profile.suspicionLevel];
     const levelText = profile.suspicionLevel.replace('_', ' ');
 
     // Get main rating
-    const mainRating = profile.ratings.blitz || profile.ratings.rapid || profile.ratings.bullet || 0;
-    const peakRating = profile.peakRatings?.blitz || profile.peakRatings?.rapid || profile.peakRatings?.bullet || mainRating;
+    const mainRating =
+      profile.ratings.blitz || profile.ratings.rapid || profile.ratings.bullet || 0;
+    const peakRating =
+      profile.peakRatings?.blitz ||
+      profile.peakRatings?.rapid ||
+      profile.peakRatings?.bullet ||
+      mainRating;
 
     // Highlight new accounts with special styling
     const isNewAccount = profile.accountAge < 30;
@@ -468,7 +571,7 @@ export class ProfileInjector {
     // Add suspicion reasons if any
     if (profile.suspicionReasons.length > 0) {
       html += '<div class="sus-meter-reasons">';
-      profile.suspicionReasons.forEach(reason => {
+      profile.suspicionReasons.forEach((reason) => {
         html += `<div class="sus-meter-reason">${reason}</div>`;
       });
       html += '</div>';
@@ -515,8 +618,10 @@ export class ProfileInjector {
    */
   removeAllBadges(): void {
     // Remove all sus-meter elements
-    const elements = document.querySelectorAll('.sus-meter-badge, .sus-meter-age-text, .sus-meter-container');
-    elements.forEach(element => element.remove());
+    const elements = document.querySelectorAll(
+      '.sus-meter-badge, .sus-meter-age-text, .sus-meter-container',
+    );
+    elements.forEach((element) => element.remove());
     this.injectedElements = new WeakSet();
     this.removeHoverCard();
     logger.debug('Removed all badges and age indicators');

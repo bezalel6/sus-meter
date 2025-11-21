@@ -1,4 +1,5 @@
-import { ChessProfile, ChessPlatform, API_ENDPOINTS } from '@/types';
+import type { ChessProfile, ChessPlatform } from '@/types';
+import { API_ENDPOINTS } from '@/types';
 import { createLogger } from './logger';
 
 const logger = createLogger('APIClient');
@@ -10,7 +11,10 @@ export class ChessAPIClient {
   /**
    * Fetch profile data from Lichess or Chess.com
    */
-  static async fetchProfile(username: string, platform: ChessPlatform): Promise<ChessProfile | null> {
+  static async fetchProfile(
+    username: string,
+    platform: ChessPlatform,
+  ): Promise<ChessProfile | null> {
     try {
       if (platform === 'lichess') {
         return await this.fetchLichessProfile(username);
@@ -105,7 +109,9 @@ export class ChessAPIClient {
       // Add recent activity if available
       if (data.seenAt) {
         const lastSeen = new Date(data.seenAt);
-        const daysSinceLastSeen = Math.floor((Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24));
+        const daysSinceLastSeen = Math.floor(
+          (Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24),
+        );
 
         if (daysSinceLastSeen <= 30) {
           profile.recentActivity = {
@@ -117,7 +123,6 @@ export class ChessAPIClient {
 
       logger.debug(`Fetched Lichess profile for ${username}`);
       return profile;
-
     } catch (error) {
       logger.error(`Error fetching Lichess profile for ${username}:`, error);
       return null;
@@ -182,7 +187,7 @@ export class ChessAPIClient {
       let totalDraws = 0;
 
       // Count rated games from standard time controls
-      ['chess_bullet', 'chess_blitz', 'chess_rapid', 'chess_daily'].forEach(category => {
+      ['chess_bullet', 'chess_blitz', 'chess_rapid', 'chess_daily'].forEach((category) => {
         if (statsData[category]?.record) {
           const record = statsData[category].record;
           const categoryWins = record.win || 0;
@@ -197,7 +202,7 @@ export class ChessAPIClient {
       });
 
       // Count unrated games (variants and puzzle rush)
-      ['chess960', 'chess3check', 'kingofthehill', 'crazyhouse'].forEach(variant => {
+      ['chess960', 'chess3check', 'kingofthehill', 'crazyhouse'].forEach((variant) => {
         if (statsData[variant]?.record) {
           const record = statsData[variant].record;
           const variantGames = (record.win || 0) + (record.loss || 0) + (record.draw || 0);
@@ -243,7 +248,6 @@ export class ChessAPIClient {
 
       logger.debug(`Fetched Chess.com profile for ${username}`);
       return profile;
-
     } catch (error) {
       logger.error(`Error fetching Chess.com profile for ${username}:`, error);
       return null;
@@ -255,7 +259,7 @@ export class ChessAPIClient {
    */
   static async fetchProfiles(
     usernames: string[],
-    platform: ChessPlatform
+    platform: ChessPlatform,
   ): Promise<Map<string, ChessProfile | null>> {
     const results = new Map<string, ChessProfile | null>();
 
@@ -268,7 +272,7 @@ export class ChessAPIClient {
       // Delay between requests to respect rate limits
       // Lichess: recommends one request at a time
       // Chess.com: serial access is unlimited, parallel may trigger 429
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     return results;
@@ -279,9 +283,10 @@ export class ChessAPIClient {
    */
   static async userExists(username: string, platform: ChessPlatform): Promise<boolean> {
     try {
-      const url = platform === 'lichess'
-        ? API_ENDPOINTS.lichess.user(username)
-        : API_ENDPOINTS.chesscom.user(username);
+      const url =
+        platform === 'lichess'
+          ? API_ENDPOINTS.lichess.user(username)
+          : API_ENDPOINTS.chesscom.user(username);
 
       // Add User-Agent header for Chess.com
       const options: RequestInit = { method: 'HEAD' };

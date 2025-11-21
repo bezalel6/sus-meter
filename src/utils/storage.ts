@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill';
-import { ExtensionSettings, DEFAULT_SETTINGS, STORAGE_KEYS } from '../types';
+import type { ExtensionSettings } from '../types';
+import { DEFAULT_SETTINGS, STORAGE_KEYS } from '../types';
 import { createLogger } from './logger';
 
 const logger = createLogger('Storage');
