@@ -127,11 +127,21 @@
       </div>
       <div class="settings-content">
         <div class="settings-section">
-          <h4>Age Threshold</h4>
+          <h4>Age Thresholds</h4>
           <div class="setting-item">
-            <label for="suspicious-days">Suspicious Account Age (days)</label>
-            <input type="number" id="suspicious-days" min="1" max="365" />
-            <span class="setting-hint">Accounts younger than this are marked as suspicious</span>
+            <label for="critical-days">Critical Age (days)</label>
+            <input type="number" id="critical-days" min="1" max="30" />
+            <span class="setting-hint">Accounts younger than this are extremely suspicious (default: 14 days)</span>
+          </div>
+          <div class="setting-item">
+            <label for="high-suspicion-days">High Suspicion Age (days)</label>
+            <input type="number" id="high-suspicion-days" min="1" max="90" />
+            <span class="setting-hint">Accounts younger than this are very suspicious (default: 30 days)</span>
+          </div>
+          <div class="setting-item">
+            <label for="suspicious-days">Suspicious Age (days)</label>
+            <input type="number" id="suspicious-days" min="1" max="730" />
+            <span class="setting-hint">Accounts younger than this are somewhat suspicious (default: 365 days)</span>
           </div>
         </div>
 
@@ -159,9 +169,9 @@
           <div class="setting-item">
             <label class="checkbox-label">
               <input type="checkbox" id="css-detection-check" />
-              <span>Use CSS Detection (Experimental)</span>
+              <span>Use CSS Detection (Default)</span>
             </label>
-            <span class="setting-hint">More efficient but experimental. Uses CSS animations instead of MutationObserver for better performance.</span>
+            <span class="setting-hint">Efficient CSS animation-based detection. Uncheck to use MutationObserver (experimental fallback).</span>
           </div>
         </div>
 

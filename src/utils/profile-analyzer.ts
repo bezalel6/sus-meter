@@ -60,47 +60,94 @@ export class ProfileAnalyzer {
   }
 
   /**
-   * Calculate suspicion based on account age
+   * Calculate suspicion based on account age (tiered thresholds)
    */
   private static calculateAccountAgeScore(profile: ChessProfile): {
     score: number;
     reason?: string;
   } {
     const { accountAge } = profile;
+    const criticalThreshold = this.settings.thresholds.criticalAccountDays;
+    const highThreshold = this.settings.thresholds.highSuspicionAccountDays;
     const suspiciousThreshold = this.settings.thresholds.suspiciousAccountDays;
 
-    // Check if account is suspicious based on age
-    if (accountAge < suspiciousThreshold) {
-      const highestRating = Math.max(
-        profile.ratings.bullet || 0,
-        profile.ratings.blitz || 0,
-        profile.ratings.rapid || 0,
-        profile.ratings.classical || 0,
-      );
+    const highestRating = Math.max(
+      profile.ratings.bullet || 0,
+      profile.ratings.blitz || 0,
+      profile.ratings.rapid || 0,
+      profile.ratings.classical || 0,
+    );
 
-      // Calculate score based on how new the account is relative to threshold
-      const ageRatio = accountAge / suspiciousThreshold;
-      let baseScore = 30 * (1 - ageRatio); // Max 30 points for brand new account
+    // CRITICAL: Account younger than 2 weeks (14 days)
+    if (accountAge < criticalThreshold) {
+      const ageRatio = accountAge / criticalThreshold;
+      let baseScore = 30 * (1 - ageRatio); // 30 points for brand new, scales down
 
       // Add extra suspicion for high ratings
       if (highestRating > this.settings.thresholds.highRatingThreshold) {
         baseScore += 10;
         return {
           score: baseScore,
-          reason: `New account (${accountAge} days) with high rating (${highestRating})`,
+          reason: `Very new account (${accountAge} days) with high rating (${highestRating})`,
         };
       } else if (highestRating > 1700) {
         baseScore += 5;
         return {
           score: baseScore,
-          reason: `New account (${accountAge} days) with ${highestRating} rating`,
+          reason: `Very new account (${accountAge} days) with ${highestRating} rating`,
         };
       }
 
       return { score: baseScore, reason: `Account only ${accountAge} days old` };
     }
 
-    // Established account
+    // HIGH: Account younger than 1 month (30 days)
+    if (accountAge < highThreshold) {
+      const ageRatio = (accountAge - criticalThreshold) / (highThreshold - criticalThreshold);
+      let baseScore = 20 + 10 * (1 - ageRatio); // 30-20 points range
+
+      // Add extra suspicion for high ratings
+      if (highestRating > this.settings.thresholds.highRatingThreshold) {
+        baseScore += 8;
+        return {
+          score: baseScore,
+          reason: `New account (${accountAge} days) with high rating (${highestRating})`,
+        };
+      } else if (highestRating > 1700) {
+        baseScore += 4;
+        return {
+          score: baseScore,
+          reason: `New account (${accountAge} days) with ${highestRating} rating`,
+        };
+      }
+
+      return { score: baseScore, reason: `New account (${accountAge} days old)` };
+    }
+
+    // MEDIUM/LOW: Account younger than 1 year (365 days)
+    if (accountAge < suspiciousThreshold) {
+      const ageRatio = (accountAge - highThreshold) / (suspiciousThreshold - highThreshold);
+      let baseScore = 10 + 10 * (1 - ageRatio); // 20-10 points range
+
+      // Add extra suspicion for high ratings
+      if (highestRating > this.settings.thresholds.highRatingThreshold) {
+        baseScore += 6;
+        return {
+          score: baseScore,
+          reason: `Relatively new account (${accountAge} days) with high rating (${highestRating})`,
+        };
+      } else if (highestRating > 1700) {
+        baseScore += 3;
+        return {
+          score: baseScore,
+          reason: `Account ${accountAge} days old with ${highestRating} rating`,
+        };
+      }
+
+      return { score: baseScore, reason: `Account ${accountAge} days old` };
+    }
+
+    // Established account (1+ years)
     return { score: 0 };
   }
 

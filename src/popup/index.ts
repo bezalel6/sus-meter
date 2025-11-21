@@ -59,6 +59,8 @@ const elements = {
   resetSettings: document.getElementById('reset-settings') as HTMLButtonElement,
 
   // Settings inputs
+  criticalDays: document.getElementById('critical-days') as HTMLInputElement,
+  highSuspicionDays: document.getElementById('high-suspicion-days') as HTMLInputElement,
   suspiciousDays: document.getElementById('suspicious-days') as HTMLInputElement,
   highRating: document.getElementById('high-rating') as HTMLInputElement,
   minGames: document.getElementById('min-games') as HTMLInputElement,
@@ -70,7 +72,9 @@ const elements = {
 let searchHistory: SearchHistoryItem[] = [];
 const currentSettings = {
   thresholds: {
-    suspiciousAccountDays: 30,
+    criticalAccountDays: 14,
+    highSuspicionAccountDays: 30,
+    suspiciousAccountDays: 365,
   },
 };
 
@@ -570,10 +574,16 @@ async function loadSettings() {
   const settings = result['settings'] as { thresholds?: any; features?: any } | undefined;
 
   // Store settings in memory
+  currentSettings.thresholds.criticalAccountDays =
+    settings?.thresholds?.criticalAccountDays || 14;
+  currentSettings.thresholds.highSuspicionAccountDays =
+    settings?.thresholds?.highSuspicionAccountDays || 30;
   currentSettings.thresholds.suspiciousAccountDays =
-    settings?.thresholds?.suspiciousAccountDays || 30;
+    settings?.thresholds?.suspiciousAccountDays || 365;
 
   // Apply settings to inputs
+  elements.criticalDays.value = String(currentSettings.thresholds.criticalAccountDays);
+  elements.highSuspicionDays.value = String(currentSettings.thresholds.highSuspicionAccountDays);
   elements.suspiciousDays.value = String(currentSettings.thresholds.suspiciousAccountDays);
   elements.highRating.value = String(settings?.thresholds?.highRatingThreshold || 2000);
   elements.minGames.value = String(settings?.thresholds?.minGamesRequired || 50);
@@ -585,7 +595,9 @@ async function loadSettings() {
 async function saveSettings() {
   const settings = {
     thresholds: {
-      suspiciousAccountDays: parseInt(elements.suspiciousDays.value) || 30,
+      criticalAccountDays: parseInt(elements.criticalDays.value) || 14,
+      highSuspicionAccountDays: parseInt(elements.highSuspicionDays.value) || 30,
+      suspiciousAccountDays: parseInt(elements.suspiciousDays.value) || 365,
       highRatingThreshold: parseInt(elements.highRating.value) || 2000,
       rapidRatingGainDays: 30, // Keep default for now
       rapidRatingGainAmount: 300, // Keep default for now

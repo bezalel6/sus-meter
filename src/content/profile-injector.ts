@@ -29,43 +29,55 @@ export class ProfileInjector {
     const style = document.createElement('style');
     style.id = 'sus-meter-styles';
     style.textContent = `
-      /* Badge styles - larger and easier to click */
+      /* Badge styles - small indicator with wide clickable area */
       .sus-meter-badge {
         display: inline-block;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
+        width: 8px;
+        height: 8px;
         margin-left: 6px;
         margin-right: 4px;
         vertical-align: middle;
         cursor: pointer;
         position: relative;
-        animation: sus-meter-fade-in 0.3s ease-in;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        /* Add larger clickable area */
-        padding: 4px;
-        margin: -4px 2px -4px 2px;
+        /* Wide clickable area via padding */
+        padding: 6px;
+        margin: -6px 2px -6px 2px;
         box-sizing: content-box;
       }
 
-      .sus-meter-badge:hover {
-        transform: scale(1.2);
+      /* Actual visual dot */
+      .sus-meter-badge::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: inherit;
+        animation: sus-meter-fade-in 0.3s ease-in;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .sus-meter-badge:hover::before {
+        transform: translate(-50%, -50%) scale(1.2);
         box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
       }
 
-      .sus-meter-badge.badge-small {
-        width: 10px;
-        height: 10px;
+      .sus-meter-badge.badge-small::before {
+        width: 7px;
+        height: 7px;
       }
 
-      .sus-meter-badge.badge-medium {
-        width: 12px;
-        height: 12px;
+      .sus-meter-badge.badge-medium::before {
+        width: 9px;
+        height: 9px;
       }
 
-      .sus-meter-badge.badge-large {
-        width: 14px;
-        height: 14px;
+      .sus-meter-badge.badge-large::before {
+        width: 11px;
+        height: 11px;
       }
 
       .sus-meter-badge.badge-before {
@@ -194,7 +206,7 @@ export class ProfileInjector {
       }
 
       /* Pulse animation for critical suspicion */
-      .sus-meter-badge.level-critical {
+      .sus-meter-badge.level-critical::before {
         animation: sus-meter-pulse 2s infinite;
       }
 
@@ -206,12 +218,21 @@ export class ProfileInjector {
       /* Loading badge - shows while analysis is in progress */
       .sus-meter-badge.loading {
         background-color: #9e9e9e !important;
+      }
+
+      .sus-meter-badge.loading::before {
         animation: sus-meter-loading-pulse 1.5s ease-in-out infinite !important;
       }
 
       @keyframes sus-meter-loading-pulse {
-        0%, 100% { opacity: 0.5; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.1); }
+        0%, 100% {
+          opacity: 0.5;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1.1);
+        }
       }
     `;
 

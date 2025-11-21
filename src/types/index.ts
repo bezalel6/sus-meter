@@ -70,11 +70,13 @@ export interface ExtensionSettings {
     checkOpponents: boolean;
     checkTournamentPlayers: boolean;
     alertOnSuspicious: boolean;
-    useCssDetection: boolean; // Use CSS animation detection instead of MutationObserver
+    useCssDetection: boolean; // Use CSS animation detection (default) or MutationObserver (experimental)
   };
   thresholds: {
-    // Single age cutoff
-    suspiciousAccountDays: number; // Accounts younger than this are suspicious - Default: 30
+    // Age-based suspicion thresholds (tiered)
+    criticalAccountDays: number; // Accounts younger than this are extremely suspicious - Default: 14 (2 weeks)
+    highSuspicionAccountDays: number; // Accounts younger than this are very suspicious - Default: 30 (1 month)
+    suspiciousAccountDays: number; // Accounts younger than this are somewhat suspicious - Default: 365 (1 year)
 
     // Performance thresholds
     highRatingThreshold: number; // Unusually high rating - Default: 2000
@@ -191,11 +193,13 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
     checkOpponents: true,
     checkTournamentPlayers: true,
     alertOnSuspicious: true,
-    useCssDetection: false, // Default to MutationObserver for now (stable fallback)
+    useCssDetection: true, // CSS animation detection is now the default (efficient)
   },
   thresholds: {
-    // Single age cutoff
-    suspiciousAccountDays: 30,
+    // Age-based suspicion thresholds (stricter defaults)
+    criticalAccountDays: 14, // 2 weeks - extremely suspicious
+    highSuspicionAccountDays: 30, // 1 month - very suspicious
+    suspiciousAccountDays: 365, // 1 year - somewhat suspicious
 
     // Performance thresholds
     highRatingThreshold: 2000,
