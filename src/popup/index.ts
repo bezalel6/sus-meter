@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill';
-import { ChessProfile, ChessPlatform, ExtensionMessage } from '@/types';
+import type { ChessProfile, ChessPlatform, ExtensionMessage } from '@/types';
 import { ChessAPIClient, ProfileAnalyzer, CacheManager } from '@/utils';
 import './popup.css';
 
@@ -59,18 +59,23 @@ const elements = {
   resetSettings: document.getElementById('reset-settings') as HTMLButtonElement,
 
   // Settings inputs
+  criticalDays: document.getElementById('critical-days') as HTMLInputElement,
+  highSuspicionDays: document.getElementById('high-suspicion-days') as HTMLInputElement,
   suspiciousDays: document.getElementById('suspicious-days') as HTMLInputElement,
   highRating: document.getElementById('high-rating') as HTMLInputElement,
   minGames: document.getElementById('min-games') as HTMLInputElement,
   winRate: document.getElementById('win-rate') as HTMLInputElement,
+  cssDetectionCheck: document.getElementById('css-detection-check') as HTMLInputElement,
 };
 
 // State
 let searchHistory: SearchHistoryItem[] = [];
-let currentSettings = {
+const currentSettings = {
   thresholds: {
-    suspiciousAccountDays: 30
-  }
+    criticalAccountDays: 14,
+    highSuspicionAccountDays: 30,
+    suspiciousAccountDays: 365,
+  },
 };
 
 // Initialize
@@ -86,12 +91,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Check for pending picker result
 async function checkForPendingPickerResult() {
   const result = await browser.storage.local.get(['lastPickerResult']);
-  const lastResult = result['lastPickerResult'] as {
-    username: string;
-    platform: ChessPlatform;
-    profile: ChessProfile;
-    timestamp: number;
-  } | undefined;
+  const lastResult = result['lastPickerResult'] as
+    | {
+        username: string;
+        platform: ChessPlatform;
+        profile: ChessProfile;
+        timestamp: number;
+      }
+    | undefined;
 
   if (lastResult && lastResult.timestamp) {
     // Check if result is less than 30 seconds old
@@ -111,7 +118,7 @@ async function checkForPendingPickerResult() {
         type: 'PICKER_RESULT',
         username: lastResult.username,
         platform: lastResult.platform,
-        data: { profile: lastResult.profile }
+        data: { profile: lastResult.profile },
       } as ExtensionMessage);
     }
   }
@@ -119,7 +126,11 @@ async function checkForPendingPickerResult() {
 
 // Setup picker result listener
 function setupPickerListener() {
-  browser.runtime.onMessage.addListener(((message: unknown, _sender: any, sendResponse: (response?: any) => void) => {
+  browser.runtime.onMessage.addListener(((
+    message: unknown,
+    _sender: any,
+    sendResponse: (response?: any) => void,
+  ) => {
     const msg = message as ExtensionMessage;
     if (msg.type === 'PICKER_RESULT') {
       // Handle async with promise
@@ -137,7 +148,7 @@ function setupPickerListener() {
 // Handle picker result from background
 async function handlePickerResult(message: ExtensionMessage) {
   const username = message.username || '';
-  const platform = message.platform || 'lichess' as ChessPlatform;
+  const platform = message.platform || ('lichess' as ChessPlatform);
   const profile = message.data?.profile as ChessProfile | undefined;
 
   // Disable picker mode UI
@@ -251,7 +262,8 @@ function setupListeners() {
   // Check if picker is already active (from previous popup open)
   browser.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
     if (tab?.id) {
-      browser.tabs.sendMessage(tab.id, { type: 'CHECK_PICKER_MODE' })
+      browser.tabs
+        .sendMessage(tab.id, { type: 'CHECK_PICKER_MODE' })
         .then((response: any) => {
           if (response?.active) {
             elements.pickerBtn.classList.add('active');
@@ -319,7 +331,7 @@ async function performSearch() {
     if (!profile) {
       // Add slight delay for better UX
       const fetchPromise = ChessAPIClient.fetchProfile(username, platform);
-      const minDelay = new Promise(resolve => setTimeout(resolve, 300));
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 300));
 
       [profile] = await Promise.all([fetchPromise, minDelay]);
 
@@ -379,7 +391,7 @@ function displayResults(profile: ChessProfile) {
   elements.ageDate.textContent = `Created ${created.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
   })}`;
 
   // Profile info
@@ -415,7 +427,7 @@ function displayResults(profile: ChessProfile) {
   // Suspicion reasons
   elements.suspicionReasons.innerHTML = '';
   if (profile.suspicionReasons.length > 0) {
-    profile.suspicionReasons.forEach(reason => {
+    profile.suspicionReasons.forEach((reason) => {
       const li = document.createElement('li');
       li.textContent = reason;
       elements.suspicionReasons.appendChild(li);
@@ -446,12 +458,12 @@ async function addToHistory(profile: ChessProfile) {
     username: profile.username,
     platform: profile.platform,
     accountAge: profile.accountAge,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
 
   // Remove if exists
-  searchHistory = searchHistory.filter(h =>
-    !(h.username === item.username && h.platform === item.platform)
+  searchHistory = searchHistory.filter(
+    (h) => !(h.username === item.username && h.platform === item.platform),
   );
 
   // Add to front
@@ -477,7 +489,7 @@ function displayHistory() {
     return;
   }
 
-  searchHistory.forEach(item => {
+  searchHistory.forEach((item) => {
     const div = document.createElement('div');
     div.className = 'history-item';
 
@@ -497,8 +509,12 @@ function displayHistory() {
 
     const age = document.createElement('span');
     age.className = 'history-age';
-    if (item.accountAge < currentSettings.thresholds.suspiciousAccountDays) age.classList.add('new');
-    age.textContent = item.accountAge < currentSettings.thresholds.suspiciousAccountDays ? 'SUS' : `${formatAge(item.accountAge)}`;
+    if (item.accountAge < currentSettings.thresholds.suspiciousAccountDays)
+      age.classList.add('new');
+    age.textContent =
+      item.accountAge < currentSettings.thresholds.suspiciousAccountDays
+        ? 'SUS'
+        : `${formatAge(item.accountAge)}`;
 
     div.appendChild(userDiv);
     div.appendChild(age);
@@ -555,30 +571,43 @@ async function saveHistory() {
 // Load settings
 async function loadSettings() {
   const result = await browser.storage.local.get(['settings']);
-  const settings = result['settings'] as { thresholds?: any } | undefined;
+  const settings = result['settings'] as { thresholds?: any; features?: any } | undefined;
 
   // Store settings in memory
-  currentSettings.thresholds.suspiciousAccountDays = settings?.thresholds?.suspiciousAccountDays || 30;
+  currentSettings.thresholds.criticalAccountDays =
+    settings?.thresholds?.criticalAccountDays || 14;
+  currentSettings.thresholds.highSuspicionAccountDays =
+    settings?.thresholds?.highSuspicionAccountDays || 30;
+  currentSettings.thresholds.suspiciousAccountDays =
+    settings?.thresholds?.suspiciousAccountDays || 365;
 
   // Apply settings to inputs
+  elements.criticalDays.value = String(currentSettings.thresholds.criticalAccountDays);
+  elements.highSuspicionDays.value = String(currentSettings.thresholds.highSuspicionAccountDays);
   elements.suspiciousDays.value = String(currentSettings.thresholds.suspiciousAccountDays);
   elements.highRating.value = String(settings?.thresholds?.highRatingThreshold || 2000);
   elements.minGames.value = String(settings?.thresholds?.minGamesRequired || 50);
   elements.winRate.value = String(settings?.thresholds?.suspiciousWinRate || 75);
+  elements.cssDetectionCheck.checked = settings?.features?.useCssDetection || false;
 }
 
 // Save settings
 async function saveSettings() {
   const settings = {
     thresholds: {
-      suspiciousAccountDays: parseInt(elements.suspiciousDays.value) || 30,
+      criticalAccountDays: parseInt(elements.criticalDays.value) || 14,
+      highSuspicionAccountDays: parseInt(elements.highSuspicionDays.value) || 30,
+      suspiciousAccountDays: parseInt(elements.suspiciousDays.value) || 365,
       highRatingThreshold: parseInt(elements.highRating.value) || 2000,
       rapidRatingGainDays: 30, // Keep default for now
       rapidRatingGainAmount: 300, // Keep default for now
       minGamesRequired: parseInt(elements.minGames.value) || 50,
       suspiciousWinRate: parseInt(elements.winRate.value) || 75,
-      suspicionAlertLevel: 'high' // Keep default for now
-    }
+      suspicionAlertLevel: 'high', // Keep default for now
+    },
+    features: {
+      useCssDetection: elements.cssDetectionCheck.checked,
+    },
   };
 
   await browser.storage.local.set({ settings });
@@ -698,20 +727,20 @@ function injectSimpleButtons(platform: string, suspiciousAccountDays: number) {
   }
 
   // Find user links based on platform
-  let userElements: Element[] = [];
+  const userElements: Element[] = [];
 
   if (platform === 'lichess') {
     // Multiple selectors for Lichess usernames
     const selectors = [
-      '.user-link[data-href]',  // Standard user links
-      'a.user-link[href*="/@/"]',  // User links with href
-      'span.user-link[data-href]',  // Span user links
-      '.text[data-href*="/@/"]',  // Text elements with user links
-      'a[href^="/@/"]'  // Direct user profile links
+      '.user-link[data-href]', // Standard user links
+      'a.user-link[href*="/@/"]', // User links with href
+      'span.user-link[data-href]', // Span user links
+      '.text[data-href*="/@/"]', // Text elements with user links
+      'a[href^="/@/"]', // Direct user profile links
     ];
 
-    selectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(el => {
+    selectors.forEach((selector) => {
+      document.querySelectorAll(selector).forEach((el) => {
         if (!el.classList.contains('sus-meter-injected')) {
           userElements.push(el);
         }
@@ -720,17 +749,17 @@ function injectSimpleButtons(platform: string, suspiciousAccountDays: number) {
   } else {
     // Multiple selectors for Chess.com usernames
     const selectors = [
-      '.cc-user-username-component',  // Standard username component
-      '.user-username-component',  // Alternative username component
-      'a[href*="/member/"]',  // Links to member profiles
-      '.user-tagline-username',  // Username in taglines
-      'a.username',  // Username links
-      '[data-test-element*="username"]',  // Elements with username test attributes
-      '.player-name'  // Player names in games
+      '.cc-user-username-component', // Standard username component
+      '.user-username-component', // Alternative username component
+      'a[href*="/member/"]', // Links to member profiles
+      '.user-tagline-username', // Username in taglines
+      'a.username', // Username links
+      '[data-test-element*="username"]', // Elements with username test attributes
+      '.player-name', // Player names in games
     ];
 
-    selectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(el => {
+    selectors.forEach((selector) => {
+      document.querySelectorAll(selector).forEach((el) => {
         if (!el.classList.contains('sus-meter-injected')) {
           userElements.push(el);
         }
@@ -793,7 +822,9 @@ function injectSimpleButtons(platform: string, suspiciousAccountDays: number) {
       const wasNewUser = !uniqueUsernames.has(username);
       uniqueUsernames.add(username);
 
-      console.log(`Adding button for username: ${username} (${wasNewUser ? 'first occurrence' : 'duplicate'})`);
+      console.log(
+        `Adding button for username: ${username} (${wasNewUser ? 'first occurrence' : 'duplicate'})`,
+      );
 
       const button = document.createElement('button');
       button.className = 'sus-meter-quick-btn';
@@ -880,56 +911,59 @@ function injectSimpleButtons(platform: string, suspiciousAccountDays: number) {
         const allButtons = usernameButtons[username!] || [button];
         const allPanels = usernamePanels[username!] || [infoPanel];
 
-        allButtons.forEach(btn => {
+        allButtons.forEach((btn) => {
           btn.textContent = '...';
           btn.disabled = true;
         });
 
         // Fetch real data from the extension's background script
-        chrome.runtime.sendMessage({
-          type: 'ANALYZE_PROFILE',
-          username: username,
-          platform: platform
-        }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('Error fetching profile:', chrome.runtime.lastError);
-            // Fallback to error state
-            allButtons.forEach(btn => {
-              btn.textContent = '!';
-              btn.style.background = '#ef4444';
-              btn.title = 'Failed to analyze';
-              btn.disabled = false;
-            });
-            return;
-          }
+        chrome.runtime.sendMessage(
+          {
+            type: 'ANALYZE_PROFILE',
+            username: username,
+            platform: platform,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.error('Error fetching profile:', chrome.runtime.lastError);
+              // Fallback to error state
+              allButtons.forEach((btn) => {
+                btn.textContent = '!';
+                btn.style.background = '#ef4444';
+                btn.title = 'Failed to analyze';
+                btn.disabled = false;
+              });
+              return;
+            }
 
-          if (response && response.profile) {
-            const profile = response.profile;
-            const isSuspicious = profile.accountAge < suspiciousAccountDays;
-            const ageClass = isSuspicious ? 'new' : 'established';
+            if (response && response.profile) {
+              const profile = response.profile;
+              const isSuspicious = profile.accountAge < suspiciousAccountDays;
+              const ageClass = isSuspicious ? 'new' : 'established';
 
-            // Get main rating
-            const mainRating = profile.ratings?.blitz || profile.ratings?.rapid || profile.ratings?.bullet || 0;
+              // Get main rating
+              const mainRating =
+                profile.ratings?.blitz || profile.ratings?.rapid || profile.ratings?.bullet || 0;
 
-            // Update all buttons and their corresponding panels
-            allButtons.forEach((btn, index) => {
-              btn.textContent = isSuspicious ? '!' : '✓';
-              btn.style.background = isSuspicious ? '#fb923c' : '#48bb78';
-              btn.title = `${username} - ${formatFriendlyAge(profile.accountAge)}`;
-              btn.disabled = false;
-              // Mark button as analyzed so hover will work
-              btn.dataset['analyzed'] = 'true';
-              // Store the data for future hover events
-              btn.dataset['age'] = String(profile.accountAge);
-              btn.dataset['games'] = String(profile.gameStats?.total || 0);
-              btn.dataset['rating'] = String(mainRating);
-              btn.dataset['ageClass'] = ageClass;
+              // Update all buttons and their corresponding panels
+              allButtons.forEach((btn, index) => {
+                btn.textContent = isSuspicious ? '!' : '✓';
+                btn.style.background = isSuspicious ? '#fb923c' : '#48bb78';
+                btn.title = `${username} - ${formatFriendlyAge(profile.accountAge)}`;
+                btn.disabled = false;
+                // Mark button as analyzed so hover will work
+                btn.dataset['analyzed'] = 'true';
+                // Store the data for future hover events
+                btn.dataset['age'] = String(profile.accountAge);
+                btn.dataset['games'] = String(profile.gameStats?.total || 0);
+                btn.dataset['rating'] = String(mainRating);
+                btn.dataset['ageClass'] = ageClass;
 
-              // Get the corresponding panel
-              const panel = allPanels[index];
-              if (panel) {
-                // Update info panel content
-                panel.innerHTML = `
+                // Get the corresponding panel
+                const panel = allPanels[index];
+                if (panel) {
+                  // Update info panel content
+                  panel.innerHTML = `
                   <div class="sus-meter-info-row">
                     <span class="sus-meter-info-label">User:</span>
                     <span class="sus-meter-info-value">${username}</span>
@@ -942,7 +976,9 @@ function injectSimpleButtons(platform: string, suspiciousAccountDays: number) {
                     <span class="sus-meter-info-label">Games:</span>
                     <span class="sus-meter-info-value">${profile.gameStats?.total || 0}</span>
                   </div>
-                  ${profile.gameStats?.rated !== undefined ? `
+                  ${
+                    profile.gameStats?.rated !== undefined
+                      ? `
                     <div class="sus-meter-info-row" style="padding-left: 8px; font-size: 11px;">
                       <span class="sus-meter-info-label">Rated:</span>
                       <span class="sus-meter-info-value">${profile.gameStats.rated}</span>
@@ -951,35 +987,38 @@ function injectSimpleButtons(platform: string, suspiciousAccountDays: number) {
                       <span class="sus-meter-info-label">Unrated:</span>
                       <span class="sus-meter-info-value">${profile.gameStats.unrated || 0}</span>
                     </div>
-                  ` : ''}
+                  `
+                      : ''
+                  }
                   <div class="sus-meter-info-row">
                     <span class="sus-meter-info-label">Rating:</span>
                     <span class="sus-meter-info-value">${mainRating || 'Unrated'}</span>
                   </div>
                 `;
 
-                // Position the info panel near the button
-                const rect = btn.getBoundingClientRect();
-                panel.style.left = `${rect.left}px`;
-                panel.style.top = `${rect.bottom + 5}px`;
-                panel.classList.add('show');
+                  // Position the info panel near the button
+                  const rect = btn.getBoundingClientRect();
+                  panel.style.left = `${rect.left}px`;
+                  panel.style.top = `${rect.bottom + 5}px`;
+                  panel.classList.add('show');
 
-                // Hide after 3 seconds
-                setTimeout(() => {
-                  panel.classList.remove('show');
-                }, 3000);
-              }
-            });
-          } else {
-            // No profile found
-            allButtons.forEach(btn => {
-              btn.textContent = '×';
-              btn.style.background = '#6b7280';
-              btn.title = `Profile not found: ${username}`;
-              btn.disabled = false;
-            });
-          }
-        });
+                  // Hide after 3 seconds
+                  setTimeout(() => {
+                    panel.classList.remove('show');
+                  }, 3000);
+                }
+              });
+            } else {
+              // No profile found
+              allButtons.forEach((btn) => {
+                btn.textContent = '×';
+                btn.style.background = '#6b7280';
+                btn.title = `Profile not found: ${username}`;
+                btn.disabled = false;
+              });
+            }
+          },
+        );
       };
 
       element.classList.add('sus-meter-injected');
@@ -995,7 +1034,9 @@ function injectSimpleButtons(platform: string, suspiciousAccountDays: number) {
     }
   });
 
-  console.log(`Successfully injected ${count} buttons for ${uniqueUsernames.size} unique usernames`);
+  console.log(
+    `Successfully injected ${count} buttons for ${uniqueUsernames.size} unique usernames`,
+  );
   return { count, uniqueUsers: uniqueUsernames.size };
 }
 
@@ -1031,7 +1072,10 @@ async function injectProfileButtons() {
       const results = await browser.scripting.executeScript({
         target: { tabId: tab.id },
         func: injectSimpleButtons,
-        args: [isLichess ? 'lichess' : 'chess.com', currentSettings.thresholds.suspiciousAccountDays]
+        args: [
+          isLichess ? 'lichess' : 'chess.com',
+          currentSettings.thresholds.suspiciousAccountDays,
+        ],
       });
 
       console.log('Script execution results:', results);
@@ -1043,7 +1087,10 @@ async function injectProfileButtons() {
             const uniqueMsg = result.uniqueUsers ? ` for ${result.uniqueUsers} unique users` : '';
             showInjectStatus(`Injected ${result.count} analysis buttons${uniqueMsg}`, 'success');
           } else {
-            showInjectStatus('No usernames found on this page. Try navigating to a page with player profiles, chat, or game lists.', 'error');
+            showInjectStatus(
+              'No usernames found on this page. Try navigating to a page with player profiles, chat, or game lists.',
+              'error',
+            );
           }
         } else {
           // If we get here, the injection ran but returned undefined/null
@@ -1051,16 +1098,25 @@ async function injectProfileButtons() {
           showInjectStatus('Injection completed. Check page for buttons.', 'success');
         }
       } else {
-        showInjectStatus('Could not inject buttons. Make sure you are on a Lichess or Chess.com page.', 'error');
+        showInjectStatus(
+          'Could not inject buttons. Make sure you are on a Lichess or Chess.com page.',
+          'error',
+        );
       }
     } catch (error: any) {
       console.error('Failed to inject script:', error);
 
       // Provide more helpful error messages
       if (error.message?.includes('Cannot access')) {
-        showInjectStatus('Cannot access this page. Try refreshing or navigating to a different page.', 'error');
+        showInjectStatus(
+          'Cannot access this page. Try refreshing or navigating to a different page.',
+          'error',
+        );
       } else if (error.message?.includes('chrome://') || error.message?.includes('edge://')) {
-        showInjectStatus('Cannot inject on browser pages. Please navigate to Lichess or Chess.com.', 'error');
+        showInjectStatus(
+          'Cannot inject on browser pages. Please navigate to Lichess or Chess.com.',
+          'error',
+        );
       } else {
         showInjectStatus('Injection failed. Please check the console for details.', 'error');
       }
@@ -1121,7 +1177,7 @@ async function enablePickerMode() {
     await browser.scripting.executeScript({
       target: { tabId: tab.id },
       func: injectPickerMode,
-      args: [isLichess ? 'lichess' : 'chess.com']
+      args: [isLichess ? 'lichess' : 'chess.com'],
     });
   } catch (error) {
     console.error('Failed to enable picker mode:', error);
@@ -1139,7 +1195,7 @@ async function disablePickerMode() {
       // Remove picker mode from page
       await browser.scripting.executeScript({
         target: { tabId: tab.id },
-        func: removePickerMode
+        func: removePickerMode,
       });
     }
 
@@ -1151,7 +1207,6 @@ async function disablePickerMode() {
     console.error('Failed to disable picker mode:', error);
   }
 }
-
 
 // Inject picker mode script
 function injectPickerMode(platform: string) {
@@ -1223,40 +1278,42 @@ function injectPickerMode(platform: string) {
   document.body.classList.add('sus-meter-picker-mode');
 
   // Username extraction patterns
-  const patterns = platform === 'lichess' ?
-    {
-      selectors: [
-        'a[href*="/@/"]',
-        '.user-link[data-href]',
-        'span.user-link',
-        '.text[data-href*="/@/"]'
-      ],
-      extract: (el: Element) => {
-        const href = el.getAttribute('href') || el.getAttribute('data-href');
-        if (href) {
-          const match = href.match(/\/@\/([^\/\?]+)/);
-          if (match) return match[1];
+  const patterns =
+    platform === 'lichess'
+      ? {
+          selectors: [
+            'a[href*="/@/"]',
+            '.user-link[data-href]',
+            'span.user-link',
+            '.text[data-href*="/@/"]',
+          ],
+          extract: (el: Element) => {
+            const href = el.getAttribute('href') || el.getAttribute('data-href');
+            if (href) {
+              const match = href.match(/\/@\/([^\/\?]+)/);
+              if (match) return match[1];
+            }
+            return el.textContent?.trim();
+          },
         }
-        return el.textContent?.trim();
-      }
-    } : {
-      selectors: [
-        'a[href*="/member/"]',
-        '.user-username-component',
-        '.username',
-        '[data-username]'
-      ],
-      extract: (el: Element) => {
-        const href = el.getAttribute('href');
-        if (href) {
-          const match = href.match(/\/member\/([^\/\?]+)/);
-          if (match) return match[1];
-        }
-        const dataUsername = el.getAttribute('data-username');
-        if (dataUsername) return dataUsername;
-        return el.textContent?.trim();
-      }
-    };
+      : {
+          selectors: [
+            'a[href*="/member/"]',
+            '.user-username-component',
+            '.username',
+            '[data-username]',
+          ],
+          extract: (el: Element) => {
+            const href = el.getAttribute('href');
+            if (href) {
+              const match = href.match(/\/member\/([^\/\?]+)/);
+              if (match) return match[1];
+            }
+            const dataUsername = el.getAttribute('data-username');
+            if (dataUsername) return dataUsername;
+            return el.textContent?.trim();
+          },
+        };
 
   let hoveredElement: Element | null = null;
 
@@ -1343,38 +1400,55 @@ function injectPickerMode(platform: string) {
         document.body.appendChild(loadingDiv);
 
         // Send message to background script
-        chrome.runtime.sendMessage({
-          type: 'PICKER_SELECTION',
-          username: username.toLowerCase(),
-          platform: platform
-        }).then((response) => {
-          console.log('Picker selection sent, response:', response);
+        chrome.runtime
+          .sendMessage({
+            type: 'PICKER_SELECTION',
+            username: username.toLowerCase(),
+            platform: platform,
+          })
+          .then((response) => {
+            console.log('Picker selection sent, response:', response);
 
-          if (response && response.success && response.profile) {
-            // Profile analyzed successfully
-            loadingDiv.textContent = '✓ Analysis complete';
-            loadingDiv.style.background = '#48bb78';
+            if (response && response.success && response.profile) {
+              // Profile analyzed successfully
+              loadingDiv.textContent = '✓ Analysis complete';
+              loadingDiv.style.background = '#48bb78';
 
-            // Check if popup is still open
-            chrome.runtime.sendMessage({ type: 'POPUP_CHECK' }).then(() => {
-              // Popup is open, it will handle the display
+              // Check if popup is still open
+              chrome.runtime
+                .sendMessage({ type: 'POPUP_CHECK' })
+                .then(() => {
+                  // Popup is open, it will handle the display
+                  setTimeout(() => {
+                    loadingDiv.remove();
+                    if ((window as any).__susPickerCleanup) {
+                      (window as any).__susPickerCleanup();
+                    }
+                  }, 1000);
+                })
+                .catch(() => {
+                  // Popup is closed
+                  setTimeout(() => {
+                    loadingDiv.remove();
+                    if ((window as any).__susPickerCleanup) {
+                      (window as any).__susPickerCleanup();
+                    }
+                  }, 1500);
+                });
+            } else {
+              loadingDiv.textContent = 'Analysis failed';
+              loadingDiv.style.background = '#ef4444';
               setTimeout(() => {
                 loadingDiv.remove();
                 if ((window as any).__susPickerCleanup) {
                   (window as any).__susPickerCleanup();
                 }
-              }, 1000);
-            }).catch(() => {
-              // Popup is closed
-              setTimeout(() => {
-                loadingDiv.remove();
-                if ((window as any).__susPickerCleanup) {
-                  (window as any).__susPickerCleanup();
-                }
-              }, 1500);
-            });
-          } else {
-            loadingDiv.textContent = 'Analysis failed';
+              }, 2000);
+            }
+          })
+          .catch((error) => {
+            console.error('Failed to send picker selection:', error);
+            loadingDiv.textContent = 'Failed to analyze';
             loadingDiv.style.background = '#ef4444';
             setTimeout(() => {
               loadingDiv.remove();
@@ -1382,18 +1456,7 @@ function injectPickerMode(platform: string) {
                 (window as any).__susPickerCleanup();
               }
             }, 2000);
-          }
-        }).catch((error) => {
-          console.error('Failed to send picker selection:', error);
-          loadingDiv.textContent = 'Failed to analyze';
-          loadingDiv.style.background = '#ef4444';
-          setTimeout(() => {
-            loadingDiv.remove();
-            if ((window as any).__susPickerCleanup) {
-              (window as any).__susPickerCleanup();
-            }
-          }, 2000);
-        });
+          });
       }
     }
   };
@@ -1411,7 +1474,7 @@ function injectPickerMode(platform: string) {
   (window as any).__susPickerHandlers = {
     mouseMove: handleMouseMove,
     click: handleClick,
-    keyDown: handleKeyDown
+    keyDown: handleKeyDown,
   };
 
   // Store cleanup function
@@ -1424,7 +1487,7 @@ function injectPickerMode(platform: string) {
     }
 
     // Remove highlights
-    document.querySelectorAll('.sus-meter-hover-highlight').forEach(el => {
+    document.querySelectorAll('.sus-meter-hover-highlight').forEach((el) => {
       el.classList.remove('sus-meter-hover-highlight');
     });
 
@@ -1469,7 +1532,7 @@ function removePickerMode() {
     document.querySelector('.sus-meter-picker-active-indicator')?.remove();
 
     // Remove any highlights
-    document.querySelectorAll('.sus-meter-hover-highlight').forEach(el => {
+    document.querySelectorAll('.sus-meter-hover-highlight').forEach((el) => {
       el.classList.remove('sus-meter-hover-highlight');
     });
   }

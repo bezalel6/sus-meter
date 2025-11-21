@@ -1,4 +1,5 @@
-import { ChessProfile, SuspicionLevel, ExtensionSettings, DEFAULT_SETTINGS } from '@/types';
+import type { ChessProfile, ExtensionSettings } from '@/types';
+import { SuspicionLevel, DEFAULT_SETTINGS } from '@/types';
 import { createLogger } from './logger';
 
 const logger = createLogger('ProfileAnalyzer');
@@ -59,51 +60,110 @@ export class ProfileAnalyzer {
   }
 
   /**
-   * Calculate suspicion based on account age
+   * Calculate suspicion based on account age (tiered thresholds)
    */
-  private static calculateAccountAgeScore(profile: ChessProfile): { score: number; reason?: string } {
+  private static calculateAccountAgeScore(profile: ChessProfile): {
+    score: number;
+    reason?: string;
+  } {
     const { accountAge } = profile;
+    const criticalThreshold = this.settings.thresholds.criticalAccountDays;
+    const highThreshold = this.settings.thresholds.highSuspicionAccountDays;
     const suspiciousThreshold = this.settings.thresholds.suspiciousAccountDays;
 
-    // Check if account is suspicious based on age
-    if (accountAge < suspiciousThreshold) {
-      const highestRating = Math.max(
-        profile.ratings.bullet || 0,
-        profile.ratings.blitz || 0,
-        profile.ratings.rapid || 0,
-        profile.ratings.classical || 0
-      );
+    const highestRating = Math.max(
+      profile.ratings.bullet || 0,
+      profile.ratings.blitz || 0,
+      profile.ratings.rapid || 0,
+      profile.ratings.classical || 0,
+    );
 
-      // Calculate score based on how new the account is relative to threshold
-      const ageRatio = accountAge / suspiciousThreshold;
-      let baseScore = 30 * (1 - ageRatio); // Max 30 points for brand new account
+    // CRITICAL: Account younger than 2 weeks (14 days)
+    if (accountAge < criticalThreshold) {
+      const ageRatio = accountAge / criticalThreshold;
+      let baseScore = 30 * (1 - ageRatio); // 30 points for brand new, scales down
 
       // Add extra suspicion for high ratings
       if (highestRating > this.settings.thresholds.highRatingThreshold) {
         baseScore += 10;
-        return { score: baseScore, reason: `New account (${accountAge} days) with high rating (${highestRating})` };
+        return {
+          score: baseScore,
+          reason: `Very new account (${accountAge} days) with high rating (${highestRating})`,
+        };
       } else if (highestRating > 1700) {
         baseScore += 5;
-        return { score: baseScore, reason: `New account (${accountAge} days) with ${highestRating} rating` };
+        return {
+          score: baseScore,
+          reason: `Very new account (${accountAge} days) with ${highestRating} rating`,
+        };
       }
 
       return { score: baseScore, reason: `Account only ${accountAge} days old` };
     }
 
-    // Established account
+    // HIGH: Account younger than 1 month (30 days)
+    if (accountAge < highThreshold) {
+      const ageRatio = (accountAge - criticalThreshold) / (highThreshold - criticalThreshold);
+      let baseScore = 20 + 10 * (1 - ageRatio); // 30-20 points range
+
+      // Add extra suspicion for high ratings
+      if (highestRating > this.settings.thresholds.highRatingThreshold) {
+        baseScore += 8;
+        return {
+          score: baseScore,
+          reason: `New account (${accountAge} days) with high rating (${highestRating})`,
+        };
+      } else if (highestRating > 1700) {
+        baseScore += 4;
+        return {
+          score: baseScore,
+          reason: `New account (${accountAge} days) with ${highestRating} rating`,
+        };
+      }
+
+      return { score: baseScore, reason: `New account (${accountAge} days old)` };
+    }
+
+    // MEDIUM/LOW: Account younger than 1 year (365 days)
+    if (accountAge < suspiciousThreshold) {
+      const ageRatio = (accountAge - highThreshold) / (suspiciousThreshold - highThreshold);
+      let baseScore = 10 + 10 * (1 - ageRatio); // 20-10 points range
+
+      // Add extra suspicion for high ratings
+      if (highestRating > this.settings.thresholds.highRatingThreshold) {
+        baseScore += 6;
+        return {
+          score: baseScore,
+          reason: `Relatively new account (${accountAge} days) with high rating (${highestRating})`,
+        };
+      } else if (highestRating > 1700) {
+        baseScore += 3;
+        return {
+          score: baseScore,
+          reason: `Account ${accountAge} days old with ${highestRating} rating`,
+        };
+      }
+
+      return { score: baseScore, reason: `Account ${accountAge} days old` };
+    }
+
+    // Established account (1+ years)
     return { score: 0 };
   }
 
   /**
    * Calculate suspicion based on rating vs games played
    */
-  private static calculateRatingVsGamesScore(profile: ChessProfile): { score: number; reason?: string } {
+  private static calculateRatingVsGamesScore(profile: ChessProfile): {
+    score: number;
+    reason?: string;
+  } {
     const totalGames = profile.gameStats.total;
     const highestRating = Math.max(
       profile.ratings.bullet || 0,
       profile.ratings.blitz || 0,
       profile.ratings.rapid || 0,
-      profile.ratings.classical || 0
+      profile.ratings.classical || 0,
     );
 
     const minGames = this.settings.thresholds.minGamesRequired;
@@ -163,7 +223,10 @@ export class ProfileAnalyzer {
   /**
    * Calculate suspicion based on rapid improvement
    */
-  private static calculateRapidImprovementScore(profile: ChessProfile): { score: number; reason?: string } {
+  private static calculateRapidImprovementScore(profile: ChessProfile): {
+    score: number;
+    reason?: string;
+  } {
     if (!profile.recentActivity) {
       return { score: 0 };
     }
@@ -190,7 +253,10 @@ export class ProfileAnalyzer {
   /**
    * Calculate suspicion based on account status
    */
-  private static calculateAccountStatusScore(profile: ChessProfile): { score: number; reason?: string } {
+  private static calculateAccountStatusScore(profile: ChessProfile): {
+    score: number;
+    reason?: string;
+  } {
     const { accountStatus } = profile;
 
     // Already flagged by platform
@@ -236,7 +302,10 @@ export class ProfileAnalyzer {
   /**
    * Analyze profile and return complete analysis
    */
-  static analyzeProfile(profile: ChessProfile, settings?: Partial<ExtensionSettings>): ChessProfile {
+  static analyzeProfile(
+    profile: ChessProfile,
+    settings?: Partial<ExtensionSettings>,
+  ): ChessProfile {
     // Update settings if provided
     if (settings) {
       this.updateSettings(settings);
@@ -250,7 +319,9 @@ export class ProfileAnalyzer {
     profile.suspicionLevel = this.getSuspicionLevel(suspicionScore);
 
     // Log analysis for debugging
-    logger.debug(`Analyzed ${profile.username}: Score ${suspicionScore}, Level ${profile.suspicionLevel}`);
+    logger.debug(
+      `Analyzed ${profile.username}: Score ${suspicionScore}, Level ${profile.suspicionLevel}`,
+    );
 
     return profile;
   }
@@ -259,11 +330,12 @@ export class ProfileAnalyzer {
    * Get a human-readable summary of the profile
    */
   static getProfileSummary(profile: ChessProfile): string {
-    const age = profile.accountAge < 30
-      ? `${profile.accountAge} days old`
-      : profile.accountAge < 365
-        ? `${Math.floor(profile.accountAge / 30)} months old`
-        : `${Math.floor(profile.accountAge / 365)} years old`;
+    const age =
+      profile.accountAge < 30
+        ? `${profile.accountAge} days old`
+        : profile.accountAge < 365
+          ? `${Math.floor(profile.accountAge / 30)} months old`
+          : `${Math.floor(profile.accountAge / 365)} years old`;
 
     const mainRating = profile.ratings.blitz || profile.ratings.rapid || profile.ratings.bullet;
 
@@ -272,7 +344,9 @@ export class ProfileAnalyzer {
       mainRating ? `Rating: ${mainRating}` : '',
       `Games: ${profile.gameStats.total}`,
       `Win rate: ${profile.gameStats.winRate}%`,
-    ].filter(Boolean).join(' | ');
+    ]
+      .filter(Boolean)
+      .join(' | ');
 
     return summary;
   }
@@ -286,7 +360,7 @@ export class ProfileAnalyzer {
       SuspicionLevel.LOW,
       SuspicionLevel.MEDIUM,
       SuspicionLevel.HIGH,
-      SuspicionLevel.CRITICAL
+      SuspicionLevel.CRITICAL,
     ];
 
     const profileLevelIndex = levels.indexOf(profile.suspicionLevel);

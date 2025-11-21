@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill';
-import { ChessProfile, CachedProfile, STORAGE_KEYS } from '@/types';
+import type { ChessProfile, CachedProfile } from '@/types';
+import { STORAGE_KEYS } from '@/types';
 import { createLogger } from './logger';
 
 const logger = createLogger('CacheManager');
@@ -13,10 +14,7 @@ export class CacheManager {
   /**
    * Get a cached profile if it exists and hasn't expired
    */
-  static async getCachedProfile(
-    username: string,
-    platform: string
-  ): Promise<ChessProfile | null> {
+  static async getCachedProfile(username: string, platform: string): Promise<ChessProfile | null> {
     try {
       const cache = await this.getAllCachedProfiles();
       const cacheKey = this.getCacheKey(username, platform);
@@ -37,7 +35,6 @@ export class CacheManager {
 
       logger.debug(`Found valid cached profile for ${username}@${platform}`);
       return cached.profile;
-
     } catch (error) {
       logger.error('Error getting cached profile:', error);
       return null;
@@ -47,10 +44,7 @@ export class CacheManager {
   /**
    * Cache a profile with expiration
    */
-  static async cacheProfile(
-    profile: ChessProfile,
-    expiryHours: number = 24
-  ): Promise<void> {
+  static async cacheProfile(profile: ChessProfile, expiryHours: number = 24): Promise<void> {
     try {
       const cache = await this.getAllCachedProfiles();
       const cacheKey = this.getCacheKey(profile.username, profile.platform);
@@ -68,7 +62,6 @@ export class CacheManager {
 
       await browser.storage.local.set({ [this.cacheKey]: cache });
       logger.debug(`Cached profile for ${profile.username}@${profile.platform}`);
-
     } catch (error) {
       logger.error('Error caching profile:', error);
     }
@@ -86,7 +79,6 @@ export class CacheManager {
 
       await browser.storage.local.set({ [this.cacheKey]: cache });
       logger.debug(`Removed cached profile for ${username}@${platform}`);
-
     } catch (error) {
       logger.error('Error removing cached profile:', error);
     }
@@ -113,7 +105,7 @@ export class CacheManager {
       const now = new Date();
       let removedCount = 0;
 
-      Object.keys(cache).forEach(key => {
+      Object.keys(cache).forEach((key) => {
         const expiresAt = new Date(cache[key]!.expiresAt);
         if (expiresAt < now) {
           delete cache[key];
@@ -127,7 +119,6 @@ export class CacheManager {
       }
 
       return removedCount;
-
     } catch (error) {
       logger.error('Error clearing expired profiles:', error);
       return 0;
@@ -159,7 +150,7 @@ export class CacheManager {
    */
   private static async enforceCacheLimit(
     cache: Record<string, CachedProfile>,
-    maxProfiles: number = 100
+    maxProfiles: number = 100,
   ): Promise<void> {
     const entries = Object.entries(cache);
 
@@ -225,7 +216,6 @@ export class CacheManager {
         averageAge: entries.length > 0 ? Math.floor(totalAge / entries.length / (1000 * 60)) : 0, // in minutes
         platforms: platformCounts,
       };
-
     } catch (error) {
       logger.error('Error getting cache stats:', error);
       return {
@@ -250,14 +240,13 @@ export class CacheManager {
         periodInMinutes: 60,
       });
 
-      browser.alarms.onAlarm.addListener(alarm => {
+      browser.alarms.onAlarm.addListener((alarm) => {
         if (alarm.name === 'cache-cleanup') {
           this.clearExpiredProfiles();
         }
       });
 
       logger.info('Cache manager initialized');
-
     } catch (error) {
       logger.error('Error initializing cache manager:', error);
     }
@@ -269,7 +258,7 @@ export class CacheManager {
   static async shouldRefetch(
     username: string,
     platform: string,
-    staleThresholdHours: number = 12
+    staleThresholdHours: number = 12,
   ): Promise<boolean> {
     try {
       const cache = await this.getAllCachedProfiles();
@@ -284,7 +273,6 @@ export class CacheManager {
       const staleTime = new Date(Date.now() - staleThresholdHours * 60 * 60 * 1000);
 
       return cachedAt < staleTime;
-
     } catch (error) {
       logger.error('Error checking if should refetch:', error);
       return true;

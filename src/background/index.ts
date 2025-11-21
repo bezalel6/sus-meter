@@ -1,13 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { Runtime, Tabs } from 'webextension-polyfill';
-import {
-  ChessProfile,
-  ChessPlatform,
-  ExtensionMessage,
-  DEFAULT_SETTINGS,
-  BADGE_COLORS,
-  SuspicionLevel,
-} from '@/types';
+import type { ChessProfile, ChessPlatform, ExtensionMessage } from '@/types';
+import { DEFAULT_SETTINGS, BADGE_COLORS, SuspicionLevel } from '@/types';
 import {
   createLogger,
   getSettings,
@@ -17,7 +11,7 @@ import {
   addToWhitelist,
   addToBlacklist,
   removeFromWhitelist,
-  removeFromBlacklist
+  removeFromBlacklist,
 } from '@/utils';
 import { ChessAPIClient } from '@/utils/api-client';
 import { ProfileAnalyzer } from '@/utils/profile-analyzer';
@@ -44,7 +38,6 @@ browser.runtime.onInstalled.addListener(async (details: Runtime.OnInstalledDetai
     // Set default badge
     await browser.action.setBadgeBackgroundColor({ color: BADGE_COLORS[SuspicionLevel.NONE] });
     await browser.action.setBadgeText({ text: '' });
-
   } else if (details.reason === 'update') {
     logger.info(`Extension updated to version ${browser.runtime.getManifest().version}`);
 
@@ -57,18 +50,16 @@ browser.runtime.onInstalled.addListener(async (details: Runtime.OnInstalledDetai
  * Handle messages from content scripts and popup
  */
 browser.runtime.onMessage.addListener(
-  (
-    message: unknown,
-    sender: Runtime.MessageSender,
-    sendResponse: (response?: any) => void,
-  ) => {
+  (message: unknown, sender: Runtime.MessageSender, sendResponse: (response?: any) => void) => {
     const request = message as ExtensionMessage;
 
     // Handle async responses
-    handleMessage(request, sender).then(sendResponse).catch(error => {
-      logger.error('Error handling message:', error);
-      sendResponse({ error: error.message });
-    });
+    handleMessage(request, sender)
+      .then(sendResponse)
+      .catch((error) => {
+        logger.error('Error handling message:', error);
+        sendResponse({ error: error.message });
+      });
 
     // Return true to indicate async response
     return true;
@@ -80,7 +71,7 @@ browser.runtime.onMessage.addListener(
  */
 async function handleMessage(
   request: ExtensionMessage,
-  sender: Runtime.MessageSender
+  sender: Runtime.MessageSender,
 ): Promise<any> {
   logger.debug(`Received message: ${request.type}`);
 
@@ -103,7 +94,7 @@ async function handleMessage(
 
       // Broadcast to all content scripts
       const tabs = await browser.tabs.query({});
-      tabs.forEach(tab => {
+      tabs.forEach((tab) => {
         if (tab.id) {
           browser.tabs.sendMessage(tab.id, request).catch(() => {});
         }
@@ -125,7 +116,7 @@ async function handleMessage(
             type: 'PICKER_RESULT',
             username: request.username,
             platform: request.platform,
-            data: { profile }
+            data: { profile },
           });
         } catch (error) {
           // Popup is closed, store result and open popup
@@ -134,8 +125,8 @@ async function handleMessage(
               username: request.username,
               platform: request.platform,
               profile,
-              timestamp: Date.now()
-            }
+              timestamp: Date.now(),
+            },
           });
 
           // Try to open popup
@@ -144,7 +135,10 @@ async function handleMessage(
           } catch (openError) {
             // If can't open popup, set badge
             await browser.action.setBadgeText({ text: '!', tabId: sender.tab.id });
-            await browser.action.setBadgeBackgroundColor({ color: '#667eea', tabId: sender.tab.id });
+            await browser.action.setBadgeBackgroundColor({
+              color: '#667eea',
+              tabId: sender.tab.id,
+            });
           }
         }
       }
@@ -187,7 +181,7 @@ async function handleMessage(
     case 'SETTINGS_UPDATED':
       // Broadcast settings update to all content scripts
       const allTabs = await browser.tabs.query({});
-      allTabs.forEach(tab => {
+      allTabs.forEach((tab) => {
         if (tab.id) {
           browser.tabs.sendMessage(tab.id, request).catch(() => {});
         }
@@ -204,7 +198,7 @@ async function handleMessage(
 
       // Store the analysis request
       await browser.storage.local.set({
-        pendingPickerAnalysis: { username, platform, timestamp: Date.now() }
+        pendingPickerAnalysis: { username, platform, timestamp: Date.now() },
       });
 
       // Analyze the profile
@@ -217,7 +211,7 @@ async function handleMessage(
             type: 'DISPLAY_PICKER_RESULT',
             username,
             platform,
-            profile: selectedProfile
+            profile: selectedProfile,
           });
           logger.debug('Picker result sent to content script for display');
         } catch (error) {
@@ -231,7 +225,7 @@ async function handleMessage(
           type: 'PICKER_RESULT',
           username,
           platform,
-          data: { profile: selectedProfile }
+          data: { profile: selectedProfile },
         });
         logger.debug('Picker result sent to popup');
       } catch (error) {
@@ -243,8 +237,8 @@ async function handleMessage(
             username,
             platform,
             profile: selectedProfile,
-            timestamp: Date.now()
-          }
+            timestamp: Date.now(),
+          },
         });
 
         // Open the popup
@@ -256,7 +250,10 @@ async function handleMessage(
           logger.debug('Could not open popup automatically, updating badge');
           if (sender.tab?.id) {
             await browser.action.setBadgeText({ text: '!', tabId: sender.tab.id });
-            await browser.action.setBadgeBackgroundColor({ color: '#667eea', tabId: sender.tab.id });
+            await browser.action.setBadgeBackgroundColor({
+              color: '#667eea',
+              tabId: sender.tab.id,
+            });
           }
         }
       }
@@ -274,13 +271,13 @@ async function handleMessage(
  */
 async function handleProfilesDetected(
   profiles: Array<{ username: string; context: string }>,
-  platform: ChessPlatform
+  platform: ChessPlatform,
 ): Promise<any> {
   const settings = await getSettings();
   const analyzedProfiles: Record<string, ChessProfile> = {};
 
   // Filter based on context and settings
-  const filteredProfiles = profiles.filter(p => {
+  const filteredProfiles = profiles.filter((p) => {
     switch (p.context) {
       case 'chat':
         return settings.features.checkChatUsers;
@@ -342,7 +339,7 @@ async function handleProfilesDetected(
  */
 async function analyzeProfile(
   username: string,
-  platform: ChessPlatform
+  platform: ChessPlatform,
 ): Promise<ChessProfile | null> {
   try {
     // Fetch profile data from API
@@ -356,7 +353,9 @@ async function analyzeProfile(
     // Analyze the profile
     const analyzed = ProfileAnalyzer.analyzeProfile(profile);
 
-    logger.debug(`Analyzed ${username}: Score ${analyzed.suspicionScore}, Level ${analyzed.suspicionLevel}`);
+    logger.debug(
+      `Analyzed ${username}: Score ${analyzed.suspicionScore}, Level ${analyzed.suspicionLevel}`,
+    );
 
     return analyzed;
   } catch (error) {
@@ -419,7 +418,7 @@ browser.tabs.onUpdated.addListener(
         await browser.action.setBadgeText({ text: '', tabId });
         await browser.action.setBadgeBackgroundColor({
           color: BADGE_COLORS[SuspicionLevel.NONE],
-          tabId
+          tabId,
         });
       } else if (!isChessSite) {
         // Hide badge on non-chess sites
@@ -434,9 +433,9 @@ browser.alarms.create('cache-cleanup', {
   periodInMinutes: 60,
 });
 
-browser.alarms.onAlarm.addListener(alarm => {
+browser.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'cache-cleanup') {
-    CacheManager.clearExpiredProfiles().catch(error => {
+    CacheManager.clearExpiredProfiles().catch((error) => {
       logger.error('Error during cache cleanup:', error);
     });
   }

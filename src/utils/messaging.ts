@@ -89,7 +89,11 @@ export function createMessageListener(
   handlers: Map<string, (message: ExtensionMessage, sender: browser.Runtime.MessageSender) => any>,
 ): void {
   browser.runtime.onMessage.addListener(
-    (request: any, sender: browser.Runtime.MessageSender, sendResponse: (response?: any) => void) => {
+    (
+      request: any,
+      sender: browser.Runtime.MessageSender,
+      sendResponse: (response?: any) => void,
+    ) => {
       const handler = handlers.get(request.type);
       if (handler) {
         const result = handler(request, sender);

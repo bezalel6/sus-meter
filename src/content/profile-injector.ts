@@ -1,4 +1,5 @@
-import { ChessProfile, ChessPlatform, BADGE_COLORS, ExtensionSettings } from '@/types';
+import type { ChessProfile, ChessPlatform, ExtensionSettings } from '@/types';
+import { BADGE_COLORS } from '@/types';
 import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('ProfileInjector');
@@ -12,9 +13,9 @@ export class ProfileInjector {
   private hoverCardElement: HTMLElement | null = null;
   private hoverTimeout: number | null = null;
 
-  constructor(_platform: ChessPlatform) {
-    // Platform passed in but not currently used
+  constructor(private platform: ChessPlatform) {
     this.injectStyles();
+    this.injectDetectionStyles();
   }
 
   /**
@@ -28,38 +29,60 @@ export class ProfileInjector {
     const style = document.createElement('style');
     style.id = 'sus-meter-styles';
     style.textContent = `
-      /* Badge styles */
+      /* Badge styles - small indicator with wide clickable area */
       .sus-meter-badge {
         display: inline-block;
         width: 8px;
         height: 8px;
-        border-radius: 50%;
-        margin-left: 4px;
-        margin-right: 2px;
+        margin-left: 6px;
+        margin-right: 4px;
         vertical-align: middle;
-        cursor: help;
+        cursor: pointer;
         position: relative;
-        animation: sus-meter-fade-in 0.3s ease-in;
+        /* Wide clickable area via padding */
+        padding: 6px;
+        margin: -6px 2px -6px 2px;
+        box-sizing: content-box;
       }
 
-      .sus-meter-badge.badge-small {
-        width: 6px;
-        height: 6px;
-      }
-
-      .sus-meter-badge.badge-medium {
+      /* Actual visual dot */
+      .sus-meter-badge::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
         width: 8px;
         height: 8px;
+        border-radius: 50%;
+        background-color: inherit;
+        animation: sus-meter-fade-in 0.3s ease-in;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
 
-      .sus-meter-badge.badge-large {
-        width: 10px;
-        height: 10px;
+      .sus-meter-badge:hover::before {
+        transform: translate(-50%, -50%) scale(1.2);
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .sus-meter-badge.badge-small::before {
+        width: 7px;
+        height: 7px;
+      }
+
+      .sus-meter-badge.badge-medium::before {
+        width: 9px;
+        height: 9px;
+      }
+
+      .sus-meter-badge.badge-large::before {
+        width: 11px;
+        height: 11px;
       }
 
       .sus-meter-badge.badge-before {
         margin-left: 2px;
-        margin-right: 4px;
+        margin-right: 6px;
       }
 
       /* Hover card styles */
@@ -183,13 +206,33 @@ export class ProfileInjector {
       }
 
       /* Pulse animation for critical suspicion */
-      .sus-meter-badge.level-critical {
+      .sus-meter-badge.level-critical::before {
         animation: sus-meter-pulse 2s infinite;
       }
 
       @keyframes sus-meter-pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.6; }
+      }
+
+      /* Loading badge - shows while analysis is in progress */
+      .sus-meter-badge.loading {
+        background-color: #9e9e9e !important;
+      }
+
+      .sus-meter-badge.loading::before {
+        animation: sus-meter-loading-pulse 1.5s ease-in-out infinite !important;
+      }
+
+      @keyframes sus-meter-loading-pulse {
+        0%, 100% {
+          opacity: 0.5;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1.1);
+        }
       }
     `;
 
@@ -198,28 +241,211 @@ export class ProfileInjector {
   }
 
   /**
-   * Inject a badge and age indicator next to a username element
+   * Inject CSS detection animation styles for element appearance detection
+   * Uses CSS animation trick to detect when elements matching selectors are added to DOM
    */
-  injectBadge(element: HTMLElement, profile: ChessProfile): void {
-    // Don't inject twice
+  private injectDetectionStyles(): void {
+    if (document.getElementById('sus-meter-detection-styles')) {
+      return; // Already injected
+    }
+
+    const style = document.createElement('style');
+    style.id = 'sus-meter-detection-styles';
+
+    // Use a minimal, non-visual animation with unique name
+    const animationName = 'sus-meter-detect';
+    const animation = `${animationName} 0.001s`;
+
+    // Platform-specific selectors
+    let selectors: string[];
+
+    if (this.platform === 'lichess') {
+      selectors = [
+        // Direct user link classes
+        '.user-link',
+        'span.user-link',
+        'h1.user-link',
+        'a.user-link',
+
+        // Href-based selectors (broad)
+        'a[href*="/@/"]',
+        '[data-href*="/@/"]',
+
+        // Chat contexts
+        '.mchat__messages a',
+        '.chat__messages a',
+        '.mchat a[href]',
+        '.chat a[href]',
+
+        // Game contexts
+        '.game__meta a',
+        '.ruser-top a',
+        '.ruser a',
+        '.player a[href]',
+
+        // Tournament contexts
+        '.tournament__standings a',
+        '.standing a',
+        '.tournament a[href*="/@/"]',
+        '.swiss__player-info a',
+        '.arena a[href]',
+
+        // Lobby and featured
+        '.lobby__spotlights a',
+        '.featured-game a',
+        '.mini-game__user a',
+        '.mini-game a[href]',
+
+        // Profile and social
+        '.user-show__header a',
+        '.friend-list a',
+        '.relation a',
+
+        // Catch-all for any link with user pattern
+        'a[href^="/@/"]',
+        'a[href^="/player/"]',
+      ];
+    } else {
+      // chess.com
+      selectors = [
+        // Username components (various classes)
+        '.user-username-component',
+        '.username-component',
+        '.user-tagline-username',
+        '[class*="username"]',
+        '[class*="user-username"]',
+
+        // Data attribute selectors
+        '[data-username]',
+        '[data-user]',
+
+        // Href-based selectors (broad)
+        'a[href*="/member/"]',
+        'a[href*="/players/"]',
+        'a[href*="/profile/"]',
+        'a[href^="/member/"]',
+        'a[href^="/players/"]',
+
+        // Chat contexts
+        '.chat-message-component a',
+        '.live-chat-message a',
+        '.chat-message a',
+        '[class*="chat"] a[href*="/member/"]',
+
+        // Game contexts
+        '.player-component a',
+        '.player-tagline a',
+        '.game-player-name a',
+        '.board-player-userinfo a',
+        '[class*="player"] a[href]',
+
+        // Tournament contexts
+        '.tournament-players-table a',
+        '.arena-leaderboard a',
+        '.tournament-player-row a',
+        '[class*="tournament"] a[href*="/member/"]',
+        '[class*="leaderboard"] a[href]',
+
+        // Profile contexts
+        '.profile-header-username',
+        '.profile-card-username a',
+        '.member-header-username',
+        '[class*="profile"] [class*="username"]',
+
+        // Social contexts
+        '.friends-list a',
+        '.club-members a',
+        '.connections-user-item a',
+
+        // Game lists and lobby
+        '.seekers-table a',
+        '.games-list-item a',
+        '.live-game-item a',
+        '[class*="game-item"] a[href]',
+
+        // Analysis
+        '.analysis-player-info a',
+        '.game-review-player a',
+        '[class*="analysis"] a[href*="/member/"]',
+      ];
+    }
+
+    // Create CSS content with keyframes and selectors
+    style.textContent = `
+      /* Detection keyframes - minimal, non-visual animation */
+      @keyframes ${animationName} {
+        from { clip-path: inset(0 0 0 0); }
+        to { clip-path: inset(0 0 0 0); }
+      }
+
+      /* Apply animation to target selectors */
+      ${selectors.join(',\n      ')} {
+        animation: ${animation} !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+    logger.debug(`Injected CSS detection styles for ${this.platform}`);
+  }
+
+  /**
+   * Inject a loading badge immediately when profile is detected
+   */
+  injectLoadingBadge(element: HTMLElement, username: string): void {
+    // Don't inject if already has any badge
     if (this.injectedElements.has(element)) {
       return;
     }
 
     // Check if badge already exists
-    const existingBadge = element.parentElement?.querySelector('.sus-meter-badge');
-    const existingAge = element.parentElement?.querySelector('.sus-meter-age-text');
-    if (existingBadge) {
-      existingBadge.remove();
-    }
-    if (existingAge) {
-      existingAge.remove();
+    const existingContainer = element.parentElement?.querySelector('.sus-meter-container');
+    if (existingContainer) {
+      return;
     }
 
-    // Create container for badge and optional age text
+    // Create container
     const container = document.createElement('span');
     container.className = 'sus-meter-container';
     container.style.cssText = 'display: inline-flex; align-items: center; gap: 4px;';
+    container.dataset['username'] = username; // Store username for later update
+
+    // Create loading badge
+    const badge = document.createElement('span');
+    badge.className = `sus-meter-badge loading badge-${this.settings.appearance?.badgeSize || 'small'}`;
+    badge.title = `Analyzing ${username}...`;
+
+    container.appendChild(badge);
+
+    // Insert container
+    if (this.settings.appearance?.badgePosition === 'before') {
+      element.parentElement?.insertBefore(container, element);
+    } else {
+      element.parentElement?.insertBefore(container, element.nextSibling);
+    }
+
+    this.injectedElements.add(element);
+    logger.debug(`Injected loading badge for ${username}`);
+  }
+
+  /**
+   * Inject a badge and age indicator next to a username element
+   */
+  injectBadge(element: HTMLElement, profile: ChessProfile): void {
+    // Check if there's an existing container (from loading badge)
+    let container = element.parentElement?.querySelector(
+      `.sus-meter-container[data-username="${profile.username}"]`,
+    ) as HTMLElement | null;
+
+    // If container exists, clear it and reuse
+    if (container) {
+      container.innerHTML = '';
+    } else {
+      // Create new container
+      container = document.createElement('span');
+      container.className = 'sus-meter-container';
+      container.style.cssText = 'display: inline-flex; align-items: center; gap: 4px;';
+      container.dataset['username'] = profile.username;
+    }
 
     // Create badge element
     const badge = document.createElement('span');
@@ -247,7 +473,8 @@ export class ProfileInjector {
       }
 
       // Style the age text based on how new the account is
-      const textColor = profile.accountAge < 7 ? '#d32f2f' : profile.accountAge < 14 ? '#f57c00' : '#795548';
+      const textColor =
+        profile.accountAge < 7 ? '#d32f2f' : profile.accountAge < 14 ? '#f57c00' : '#795548';
       ageText.style.cssText = `
         font-size: 10px;
         font-weight: 600;
@@ -276,15 +503,19 @@ export class ProfileInjector {
       element.addEventListener('mouseleave', () => this.hideHoverCard());
     }
 
-    // Insert container
-    if (this.settings.appearance?.badgePosition === 'before') {
-      element.parentElement?.insertBefore(container, element);
-    } else {
-      element.parentElement?.insertBefore(container, element.nextSibling);
+    // Insert container only if it's new (not updating from loading badge)
+    if (!container.parentElement) {
+      if (this.settings.appearance?.badgePosition === 'before') {
+        element.parentElement?.insertBefore(container, element);
+      } else {
+        element.parentElement?.insertBefore(container, element.nextSibling);
+      }
     }
 
     this.injectedElements.add(element);
-    logger.debug(`Injected badge for ${profile.username} (${profile.suspicionLevel}, ${profile.accountAge} days old)`);
+    logger.debug(
+      `Injected badge for ${profile.username} (${profile.suspicionLevel}, ${profile.accountAge} days old)`,
+    );
   }
 
   /**
@@ -351,7 +582,10 @@ export class ProfileInjector {
     card.className = 'sus-meter-hover-card';
 
     // Check for dark mode
-    if (document.body.classList.contains('dark-mode') || document.body.classList.contains('theme-dark')) {
+    if (
+      document.body.classList.contains('dark-mode') ||
+      document.body.classList.contains('theme-dark')
+    ) {
       card.classList.add('dark-mode');
     }
 
@@ -405,15 +639,20 @@ export class ProfileInjector {
     const dateString = createdDate.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
 
     const levelColor = BADGE_COLORS[profile.suspicionLevel];
     const levelText = profile.suspicionLevel.replace('_', ' ');
 
     // Get main rating
-    const mainRating = profile.ratings.blitz || profile.ratings.rapid || profile.ratings.bullet || 0;
-    const peakRating = profile.peakRatings?.blitz || profile.peakRatings?.rapid || profile.peakRatings?.bullet || mainRating;
+    const mainRating =
+      profile.ratings.blitz || profile.ratings.rapid || profile.ratings.bullet || 0;
+    const peakRating =
+      profile.peakRatings?.blitz ||
+      profile.peakRatings?.rapid ||
+      profile.peakRatings?.bullet ||
+      mainRating;
 
     // Highlight new accounts with special styling
     const isNewAccount = profile.accountAge < 30;
@@ -468,7 +707,7 @@ export class ProfileInjector {
     // Add suspicion reasons if any
     if (profile.suspicionReasons.length > 0) {
       html += '<div class="sus-meter-reasons">';
-      profile.suspicionReasons.forEach(reason => {
+      profile.suspicionReasons.forEach((reason) => {
         html += `<div class="sus-meter-reason">${reason}</div>`;
       });
       html += '</div>';
@@ -515,8 +754,10 @@ export class ProfileInjector {
    */
   removeAllBadges(): void {
     // Remove all sus-meter elements
-    const elements = document.querySelectorAll('.sus-meter-badge, .sus-meter-age-text, .sus-meter-container');
-    elements.forEach(element => element.remove());
+    const elements = document.querySelectorAll(
+      '.sus-meter-badge, .sus-meter-age-text, .sus-meter-container',
+    );
+    elements.forEach((element) => element.remove());
     this.injectedElements = new WeakSet();
     this.removeHoverCard();
     logger.debug('Removed all badges and age indicators');

@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill';
-import { ProfileDetection, ChessPlatform, ExtensionMessage } from '@/types';
+import type { ProfileDetection, ChessPlatform, ExtensionMessage } from '@/types';
 import { createLogger } from '@/utils/logger';
 import { ProfileInjector } from './profile-injector';
 import { ProfileButtonInjector } from './profile-button-injector';
@@ -12,10 +12,12 @@ const platform: ChessPlatform = 'lichess';
  */
 export class LichessProfileDetector {
   private observer: MutationObserver | null = null;
+  private animationHandler: ((e: AnimationEvent) => void) | null = null;
   private injector: ProfileInjector;
   private buttonInjector: ProfileButtonInjector;
   private detectedProfiles = new Set<string>();
   private isEnabled = true;
+  private useCssDetection = false;
 
   constructor() {
     this.injector = new ProfileInjector(platform);
@@ -28,16 +30,18 @@ export class LichessProfileDetector {
   async initialize(): Promise<void> {
     logger.info('Initializing Lichess profile detector');
 
-    // Check if extension is enabled
+    // Check if extension is enabled and get settings
     try {
-      const response = await browser.runtime.sendMessage({
+      const response = (await browser.runtime.sendMessage({
         type: 'GET_SETTINGS',
-      }) as any;
+      })) as any;
 
       this.isEnabled = response?.enabled ?? true;
+      this.useCssDetection = response?.features?.useCssDetection ?? false;
     } catch (error) {
       logger.error('Failed to get settings:', error);
       this.isEnabled = true;
+      this.useCssDetection = false;
     }
 
     if (this.isEnabled) {
@@ -54,14 +58,44 @@ export class LichessProfileDetector {
    * Start detecting profiles on the page
    */
   private startDetection(): void {
-    // Initial scan
+    // Initial scan for already-present elements
     this.scanForProfiles();
 
-    // Set up mutation observer for dynamic content
+    if (this.useCssDetection) {
+      // Use CSS animation detection (more efficient)
+      this.startCssDetection();
+    } else {
+      // Use MutationObserver (fallback)
+      this.startMutationObserver();
+    }
+
+    logger.debug(
+      `Started profile detection (${this.useCssDetection ? 'CSS animation' : 'MutationObserver'})`,
+    );
+  }
+
+  /**
+   * Start CSS animation-based detection
+   */
+  private startCssDetection(): void {
+    this.animationHandler = (event: AnimationEvent) => {
+      if (event.animationName === 'sus-meter-detect') {
+        this.handleNewElement(event.target as HTMLElement);
+      }
+    };
+
+    document.addEventListener('animationstart', this.animationHandler, true);
+    logger.debug('CSS animation detection active');
+  }
+
+  /**
+   * Start MutationObserver-based detection (fallback)
+   */
+  private startMutationObserver(): void {
     this.observer = new MutationObserver((mutations) => {
       // Batch mutations to avoid excessive scanning
-      const hasRelevantChanges = mutations.some(mutation =>
-        mutation.type === 'childList' && mutation.addedNodes.length > 0
+      const hasRelevantChanges = mutations.some(
+        (mutation) => mutation.type === 'childList' && mutation.addedNodes.length > 0,
       );
 
       if (hasRelevantChanges) {
@@ -74,16 +108,66 @@ export class LichessProfileDetector {
       subtree: true,
     });
 
-    logger.debug('Started profile detection');
+    logger.debug('MutationObserver detection active');
+  }
+
+  /**
+   * Handle a newly detected element (CSS detection)
+   */
+  private handleNewElement(element: HTMLElement): void {
+    if (!this.isEnabled) return;
+
+    const username = this.extractUsername(element);
+    if (!username) return;
+
+    const context = this.determineContext(element);
+    const key = `${username}:${element.tagName}:${context}`;
+
+    if (this.detectedProfiles.has(key)) return;
+
+    this.detectedProfiles.add(key);
+    this.processProfiles([
+      {
+        element,
+        username,
+        context,
+        platform,
+      },
+    ]);
+  }
+
+  /**
+   * Determine context from element location in DOM
+   */
+  private determineContext(
+    element: HTMLElement,
+  ): 'chat' | 'game' | 'tournament' | 'profile' | 'list' {
+    // Use closest() for efficient context detection
+    if (element.closest('.mchat__messages, .chat__messages')) return 'chat';
+    if (element.closest('.game__meta, .ruser-top')) return 'game';
+    if (element.closest('.tournament__standings, .standing')) return 'tournament';
+    if (element.closest('.user-show__header')) return 'profile';
+    if (element.closest('.mini-game__user, .featured-game')) return 'game';
+    if (element.closest('.lobby__spotlights, .swiss__player-info')) return 'tournament';
+    if (element.closest('.friend-list, .relation')) return 'list';
+
+    return 'list'; // Default
   }
 
   /**
    * Stop detecting profiles
    */
   private stopDetection(): void {
+    // Clean up MutationObserver
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+
+    // Clean up CSS animation listener
+    if (this.animationHandler) {
+      document.removeEventListener('animationstart', this.animationHandler, true);
+      this.animationHandler = null;
     }
 
     // Clean up injected badges
@@ -102,7 +186,7 @@ export class LichessProfileDetector {
     const profiles = this.findProfileElements();
     const newProfiles: ProfileDetection[] = [];
 
-    profiles.forEach(profile => {
+    profiles.forEach((profile) => {
       const key = `${profile.username}:${profile.element.tagName}:${profile.context}`;
 
       if (!this.detectedProfiles.has(key)) {
@@ -122,99 +206,43 @@ export class LichessProfileDetector {
   private findProfileElements(): ProfileDetection[] {
     const profiles: ProfileDetection[] = [];
 
-    // Chat messages - usernames in chat
-    const chatUsers = document.querySelectorAll('.mchat__messages .user-link, .chat__messages .user-link');
-    chatUsers.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'chat',
-          platform,
-        });
-      }
-    });
+    // Comprehensive selector matching CSS detection selectors
+    const selector = [
+      '.user-link',
+      'a[href*="/@/"]',
+      'a[href^="/@/"]',
+      '[data-href*="/@/"]',
+      '.mchat a[href]',
+      '.chat a[href]',
+      '.game__meta a',
+      '.ruser-top a',
+      '.ruser a',
+      '.tournament__standings a',
+      '.standing a',
+      '.user-show__header a',
+      'h1.user-link',
+      '.mini-game__user a',
+      '.featured-game a',
+      '.lobby__spotlights a',
+      '.swiss__player-info a',
+      '.friend-list a',
+      '.relation a',
+      '.mini-game a[href]',
+      '.tournament a[href*="/@/"]',
+      '.arena a[href]',
+      '.player a[href]',
+    ].join(', ');
 
-    // Game pages - player names
-    const gamePlayers = document.querySelectorAll('.game__meta .user-link, .ruser-top .user-link');
-    gamePlayers.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'game',
-          platform,
-        });
-      }
-    });
+    const allElements = document.querySelectorAll(selector);
 
-    // Tournament pages
-    const tournamentPlayers = document.querySelectorAll('.tournament__standings .user-link, .standing .user-link');
-    tournamentPlayers.forEach(element => {
+    allElements.forEach((element) => {
       const username = this.extractUsername(element as HTMLElement);
       if (username) {
+        const context = this.determineContext(element as HTMLElement);
         profiles.push({
           element: element as HTMLElement,
           username,
-          context: 'tournament',
-          platform,
-        });
-      }
-    });
-
-    // Profile pages
-    const profileHeaders = document.querySelectorAll('.user-show__header .user-link, h1.user-link');
-    profileHeaders.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'profile',
-          platform,
-        });
-      }
-    });
-
-    // TV games and featured games
-    const tvPlayers = document.querySelectorAll('.mini-game__user .user-link, .featured-game .user-link');
-    tvPlayers.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'game',
-          platform,
-        });
-      }
-    });
-
-    // Arena/Swiss tournament lobbies
-    const lobbyPlayers = document.querySelectorAll('.lobby__spotlights .user-link, .swiss__player-info .user-link');
-    lobbyPlayers.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'tournament',
-          platform,
-        });
-      }
-    });
-
-    // Friend list and follows
-    const friendsList = document.querySelectorAll('.friend-list .user-link, .relation .user-link');
-    friendsList.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'list',
+          context,
           platform,
         });
       }
@@ -261,10 +289,15 @@ export class LichessProfileDetector {
   private async processProfiles(profiles: ProfileDetection[]): Promise<void> {
     logger.debug(`Processing ${profiles.length} new profiles`);
 
+    // Inject loading badges immediately for instant feedback
+    profiles.forEach((detection) => {
+      this.injector.injectLoadingBadge(detection.element, detection.username);
+    });
+
     // Send profiles to background script for analysis
     const message: ExtensionMessage = {
       type: 'PROFILES_DETECTED',
-      data: profiles.map(p => ({
+      data: profiles.map((p) => ({
         username: p.username,
         context: p.context,
       })),
@@ -272,11 +305,11 @@ export class LichessProfileDetector {
     };
 
     try {
-      const response = await browser.runtime.sendMessage(message) as any;
+      const response = (await browser.runtime.sendMessage(message)) as any;
 
       if (response && response.profiles) {
-        // Inject badges for analyzed profiles
-        profiles.forEach(detection => {
+        // Update badges with analyzed profile data
+        profiles.forEach((detection) => {
           const profileData = response.profiles[detection.username];
           if (profileData) {
             this.injector.injectBadge(detection.element, profileData);
@@ -294,7 +327,7 @@ export class LichessProfileDetector {
   private handleMessage(
     request: ExtensionMessage,
     _sender: browser.Runtime.MessageSender,
-    sendResponse: (response?: any) => void
+    sendResponse: (response?: any) => void,
   ): true | void {
     switch (request.type) {
       case 'TOGGLE_ENABLED':
@@ -308,16 +341,29 @@ export class LichessProfileDetector {
         break;
 
       case 'SETTINGS_UPDATED':
-        // Re-scan with new settings
+        // Update settings and restart detection if detection method changed
+        const newUseCssDetection = request.data?.features?.useCssDetection ?? false;
+        const detectionMethodChanged = newUseCssDetection !== this.useCssDetection;
+
         this.injector.updateSettings(request.data);
+        this.useCssDetection = newUseCssDetection;
         this.detectedProfiles.clear();
-        this.scanForProfiles();
+
+        if (detectionMethodChanged && this.isEnabled) {
+          // Restart detection with new method
+          this.stopDetection();
+          this.startDetection();
+        } else {
+          // Just re-scan
+          this.scanForProfiles();
+        }
+
         sendResponse({ success: true });
         break;
 
       case 'INJECT_PROFILE_BUTTONS':
         // Inject analysis buttons for all profiles on page
-        this.buttonInjector.injectButtons().then(result => {
+        this.buttonInjector.injectButtons().then((result) => {
           sendResponse(result);
         });
         return true; // Keep message channel open for async response
@@ -358,7 +404,7 @@ export class LichessProfileDetector {
       '.relation .user-link',
       'a[href*="/@/"]',
       '.text[data-href*="/@/"]',
-      'span.user-link'
+      'span.user-link',
     ];
 
     const allUserElements = document.querySelectorAll(selectors.join(','));
@@ -389,7 +435,9 @@ export class LichessProfileDetector {
       }
 
       // Also check if parent has an indicator for this username
-      const existingIndicator = element.parentElement?.querySelector(`.sus-meter-picker-indicator[data-username="${username}"]`);
+      const existingIndicator = element.parentElement?.querySelector(
+        `.sus-meter-picker-indicator[data-username="${username}"]`,
+      );
       if (existingIndicator) {
         return;
       }
@@ -410,7 +458,7 @@ export class LichessProfileDetector {
 
 // Initialize detector when content script loads
 const detector = new LichessProfileDetector();
-detector.initialize().catch(error => {
+detector.initialize().catch((error) => {
   logger.error('Failed to initialize Lichess detector:', error);
 });
 

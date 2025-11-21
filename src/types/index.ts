@@ -53,11 +53,11 @@ export interface ChessProfile {
 
 // Suspicion levels with color codes
 export enum SuspicionLevel {
-  NONE = 'none',       // Green - Established player
-  LOW = 'low',         // Light Yellow - Minor flags
-  MEDIUM = 'medium',   // Yellow - Caution advised
-  HIGH = 'high',       // Orange - Suspicious patterns
-  CRITICAL = 'critical' // Red - Major red flags
+  NONE = 'none', // Green - Established player
+  LOW = 'low', // Light Yellow - Minor flags
+  MEDIUM = 'medium', // Yellow - Caution advised
+  HIGH = 'high', // Orange - Suspicious patterns
+  CRITICAL = 'critical', // Red - Major red flags
 }
 
 // Extension configuration
@@ -70,19 +70,22 @@ export interface ExtensionSettings {
     checkOpponents: boolean;
     checkTournamentPlayers: boolean;
     alertOnSuspicious: boolean;
+    useCssDetection: boolean; // Use CSS animation detection (default) or MutationObserver (experimental)
   };
   thresholds: {
-    // Single age cutoff
-    suspiciousAccountDays: number;   // Accounts younger than this are suspicious - Default: 30
+    // Age-based suspicion thresholds (tiered)
+    criticalAccountDays: number; // Accounts younger than this are extremely suspicious - Default: 14 (2 weeks)
+    highSuspicionAccountDays: number; // Accounts younger than this are very suspicious - Default: 30 (1 month)
+    suspiciousAccountDays: number; // Accounts younger than this are somewhat suspicious - Default: 365 (1 year)
 
     // Performance thresholds
-    highRatingThreshold: number;     // Unusually high rating - Default: 2000
-    rapidRatingGainDays: number;     // Days to check for rapid rating gain - Default: 30
-    rapidRatingGainAmount: number;   // Rating gain threshold - Default: 300
+    highRatingThreshold: number; // Unusually high rating - Default: 2000
+    rapidRatingGainDays: number; // Days to check for rapid rating gain - Default: 30
+    rapidRatingGainAmount: number; // Rating gain threshold - Default: 300
 
     // Game thresholds
-    minGamesRequired: number;        // Minimum games for established player - Default: 50
-    suspiciousWinRate: number;       // Win rate % that's suspicious - Default: 75
+    minGamesRequired: number; // Minimum games for established player - Default: 50
+    suspiciousWinRate: number; // Win rate % that's suspicious - Default: 75
 
     // Alert settings
     suspicionAlertLevel: SuspicionLevel;
@@ -173,10 +176,10 @@ export const STORAGE_KEYS = {
 
 // Badge colors by suspicion level
 export const BADGE_COLORS = {
-  [SuspicionLevel.NONE]: '#22c55e',     // Green
-  [SuspicionLevel.LOW]: '#84cc16',      // Light green
-  [SuspicionLevel.MEDIUM]: '#facc15',   // Yellow
-  [SuspicionLevel.HIGH]: '#fb923c',     // Orange
+  [SuspicionLevel.NONE]: '#22c55e', // Green
+  [SuspicionLevel.LOW]: '#84cc16', // Light green
+  [SuspicionLevel.MEDIUM]: '#facc15', // Yellow
+  [SuspicionLevel.HIGH]: '#fb923c', // Orange
   [SuspicionLevel.CRITICAL]: '#ef4444', // Red
 } as const;
 
@@ -190,10 +193,13 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
     checkOpponents: true,
     checkTournamentPlayers: true,
     alertOnSuspicious: true,
+    useCssDetection: true, // CSS animation detection is now the default (efficient)
   },
   thresholds: {
-    // Single age cutoff
-    suspiciousAccountDays: 30,
+    // Age-based suspicion thresholds (stricter defaults)
+    criticalAccountDays: 14, // 2 weeks - extremely suspicious
+    highSuspicionAccountDays: 30, // 1 month - very suspicious
+    suspiciousAccountDays: 365, // 1 year - somewhat suspicious
 
     // Performance thresholds
     highRatingThreshold: 2000,

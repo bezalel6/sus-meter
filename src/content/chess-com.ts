@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill';
-import { ProfileDetection, ChessPlatform, ExtensionMessage } from '@/types';
+import type { ProfileDetection, ChessPlatform, ExtensionMessage } from '@/types';
 import { createLogger } from '@/utils/logger';
 import { ProfileInjector } from './profile-injector';
 import { ProfileButtonInjector } from './profile-button-injector';
@@ -12,10 +12,12 @@ const platform: ChessPlatform = 'chess.com';
  */
 export class ChessComProfileDetector {
   private observer: MutationObserver | null = null;
+  private animationHandler: ((e: AnimationEvent) => void) | null = null;
   private injector: ProfileInjector;
   private buttonInjector: ProfileButtonInjector;
   private detectedProfiles = new Set<string>();
   private isEnabled = true;
+  private useCssDetection = false;
 
   constructor() {
     this.injector = new ProfileInjector(platform);
@@ -28,16 +30,18 @@ export class ChessComProfileDetector {
   async initialize(): Promise<void> {
     logger.info('Initializing Chess.com profile detector');
 
-    // Check if extension is enabled
+    // Check if extension is enabled and get settings
     try {
-      const response = await browser.runtime.sendMessage({
+      const response = (await browser.runtime.sendMessage({
         type: 'GET_SETTINGS',
-      }) as any;
+      })) as any;
 
       this.isEnabled = response?.enabled ?? true;
+      this.useCssDetection = response?.features?.useCssDetection ?? false;
     } catch (error) {
       logger.error('Failed to get settings:', error);
       this.isEnabled = true;
+      this.useCssDetection = false;
     }
 
     if (this.isEnabled) {
@@ -54,14 +58,44 @@ export class ChessComProfileDetector {
    * Start detecting profiles on the page
    */
   private startDetection(): void {
-    // Initial scan
+    // Initial scan for already-present elements
     this.scanForProfiles();
 
-    // Set up mutation observer for dynamic content
+    if (this.useCssDetection) {
+      // Use CSS animation detection (more efficient)
+      this.startCssDetection();
+    } else {
+      // Use MutationObserver (fallback)
+      this.startMutationObserver();
+    }
+
+    logger.debug(
+      `Started profile detection (${this.useCssDetection ? 'CSS animation' : 'MutationObserver'})`,
+    );
+  }
+
+  /**
+   * Start CSS animation-based detection
+   */
+  private startCssDetection(): void {
+    this.animationHandler = (event: AnimationEvent) => {
+      if (event.animationName === 'sus-meter-detect') {
+        this.handleNewElement(event.target as HTMLElement);
+      }
+    };
+
+    document.addEventListener('animationstart', this.animationHandler, true);
+    logger.debug('CSS animation detection active');
+  }
+
+  /**
+   * Start MutationObserver-based detection (fallback)
+   */
+  private startMutationObserver(): void {
     this.observer = new MutationObserver((mutations) => {
       // Batch mutations to avoid excessive scanning
-      const hasRelevantChanges = mutations.some(mutation =>
-        mutation.type === 'childList' && mutation.addedNodes.length > 0
+      const hasRelevantChanges = mutations.some(
+        (mutation) => mutation.type === 'childList' && mutation.addedNodes.length > 0,
       );
 
       if (hasRelevantChanges) {
@@ -74,16 +108,76 @@ export class ChessComProfileDetector {
       subtree: true,
     });
 
-    logger.debug('Started profile detection');
+    logger.debug('MutationObserver detection active');
+  }
+
+  /**
+   * Handle a newly detected element (CSS detection)
+   */
+  private handleNewElement(element: HTMLElement): void {
+    if (!this.isEnabled) return;
+
+    const username = this.extractUsername(element);
+    if (!username) return;
+
+    const context = this.determineContext(element);
+    const key = `${username}:${element.tagName}:${context}`;
+
+    if (this.detectedProfiles.has(key)) return;
+
+    this.detectedProfiles.add(key);
+    this.processProfiles([
+      {
+        element,
+        username,
+        context,
+        platform,
+      },
+    ]);
+  }
+
+  /**
+   * Determine context from element location in DOM
+   */
+  private determineContext(
+    element: HTMLElement,
+  ): 'chat' | 'game' | 'tournament' | 'profile' | 'list' {
+    // Use closest() for efficient context detection
+    if (element.closest('.chat-message-component, .live-chat-message, .chat-message'))
+      return 'chat';
+    if (
+      element.closest(
+        '.player-component, .player-tagline, .game-player-name, .board-player-userinfo',
+      )
+    )
+      return 'game';
+    if (element.closest('.tournament-players-table, .arena-leaderboard, .tournament-player-row'))
+      return 'tournament';
+    if (
+      element.closest('.profile-header-username, .profile-card-username, .member-header-username')
+    )
+      return 'profile';
+    if (element.closest('.analysis-player-info, .game-review-player')) return 'game';
+    if (element.closest('.friends-list, .club-members, .connections-user-item')) return 'list';
+    if (element.closest('.seekers-table, .games-list-item, .live-game-item')) return 'list';
+
+    return 'list'; // Default
   }
 
   /**
    * Stop detecting profiles
    */
   private stopDetection(): void {
+    // Clean up MutationObserver
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+
+    // Clean up CSS animation listener
+    if (this.animationHandler) {
+      document.removeEventListener('animationstart', this.animationHandler, true);
+      this.animationHandler = null;
     }
 
     // Clean up injected badges
@@ -102,7 +196,7 @@ export class ChessComProfileDetector {
     const profiles = this.findProfileElements();
     const newProfiles: ProfileDetection[] = [];
 
-    profiles.forEach(profile => {
+    profiles.forEach((profile) => {
       const key = `${profile.username}:${profile.element.tagName}:${profile.context}`;
 
       if (!this.detectedProfiles.has(key)) {
@@ -122,127 +216,54 @@ export class ChessComProfileDetector {
   private findProfileElements(): ProfileDetection[] {
     const profiles: ProfileDetection[] = [];
 
-    // Chat messages - usernames in live chat
-    const chatUsers = document.querySelectorAll(
-      '.chat-message-component .username-component, ' +
-      '.live-chat-message .username, ' +
-      '.chat-message .user-username-component'
-    );
-    chatUsers.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'chat',
-          platform,
-        });
-      }
-    });
+    // Comprehensive selector matching CSS detection selectors
+    const selector = [
+      '.user-username-component',
+      '.username-component',
+      '[class*="username"]',
+      '[data-username]',
+      '[data-user]',
+      'a[href*="/member/"]',
+      'a[href*="/players/"]',
+      'a[href*="/profile/"]',
+      'a[href^="/member/"]',
+      'a[href^="/players/"]',
+      '.chat-message-component a',
+      '.live-chat-message a',
+      '.chat-message a',
+      '.player-component a',
+      '.player-tagline a',
+      '.game-player-name a',
+      '.board-player-userinfo a',
+      '.tournament-players-table a',
+      '.arena-leaderboard a',
+      '.tournament-player-row a',
+      '.profile-header-username',
+      '.profile-card-username a',
+      '.member-header-username',
+      '.friends-list a',
+      '.club-members a',
+      '.connections-user-item a',
+      '.seekers-table a',
+      '.games-list-item a',
+      '.live-game-item a',
+      '.analysis-player-info a',
+      '.game-review-player a',
+      '[class*="player"] a[href]',
+      '[class*="tournament"] a[href*="/member/"]',
+      '[class*="game-item"] a[href]',
+    ].join(', ');
 
-    // Game pages - player names in live and daily games
-    const gamePlayers = document.querySelectorAll(
-      '.player-component .user-username-component, ' +
-      '.player-tagline .user-username-component, ' +
-      '.game-player-name .username, ' +
-      '.board-player-userinfo .user-username-link'
-    );
-    gamePlayers.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'game',
-          platform,
-        });
-      }
-    });
+    const allElements = document.querySelectorAll(selector);
 
-    // Tournament pages and arenas
-    const tournamentPlayers = document.querySelectorAll(
-      '.tournament-players-table .user-username-component, ' +
-      '.arena-leaderboard .user-username-component, ' +
-      '.tournament-player-row .username'
-    );
-    tournamentPlayers.forEach(element => {
+    allElements.forEach((element) => {
       const username = this.extractUsername(element as HTMLElement);
       if (username) {
+        const context = this.determineContext(element as HTMLElement);
         profiles.push({
           element: element as HTMLElement,
           username,
-          context: 'tournament',
-          platform,
-        });
-      }
-    });
-
-    // Profile pages
-    const profileHeaders = document.querySelectorAll(
-      '.profile-header-username, ' +
-      '.profile-card-username .user-username-component, ' +
-      '.member-header-username'
-    );
-    profileHeaders.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'profile',
-          platform,
-        });
-      }
-    });
-
-    // Friends list and clubs
-    const friendsList = document.querySelectorAll(
-      '.friends-list .user-username-component, ' +
-      '.club-members .user-username-component, ' +
-      '.connections-user-item .username'
-    );
-    friendsList.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'list',
-          platform,
-        });
-      }
-    });
-
-    // Live chess lobby and game lists
-    const lobbyPlayers = document.querySelectorAll(
-      '.seekers-table .user-username-component, ' +
-      '.games-list-item .user-username-component, ' +
-      '.live-game-item .username'
-    );
-    lobbyPlayers.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'list',
-          platform,
-        });
-      }
-    });
-
-    // Analysis board and game review
-    const analysisPlayers = document.querySelectorAll(
-      '.analysis-player-info .user-username-component, ' +
-      '.game-review-player .username'
-    );
-    analysisPlayers.forEach(element => {
-      const username = this.extractUsername(element as HTMLElement);
-      if (username) {
-        profiles.push({
-          element: element as HTMLElement,
-          username,
-          context: 'game',
+          context,
           platform,
         });
       }
@@ -273,7 +294,9 @@ export class ChessComProfileDetector {
     }
 
     // Check parent elements for links
-    const parentLink = element.closest('a[href*="/member/"], a[href*="/players/"], a[href*="/profile/"]');
+    const parentLink = element.closest(
+      'a[href*="/member/"], a[href*="/players/"], a[href*="/profile/"]',
+    );
     if (parentLink) {
       const parentHref = parentLink.getAttribute('href');
       if (parentHref) {
@@ -302,10 +325,15 @@ export class ChessComProfileDetector {
   private async processProfiles(profiles: ProfileDetection[]): Promise<void> {
     logger.debug(`Processing ${profiles.length} new profiles`);
 
+    // Inject loading badges immediately for instant feedback
+    profiles.forEach((detection) => {
+      this.injector.injectLoadingBadge(detection.element, detection.username);
+    });
+
     // Send profiles to background script for analysis
     const message: ExtensionMessage = {
       type: 'PROFILES_DETECTED',
-      data: profiles.map(p => ({
+      data: profiles.map((p) => ({
         username: p.username,
         context: p.context,
       })),
@@ -313,11 +341,11 @@ export class ChessComProfileDetector {
     };
 
     try {
-      const response = await browser.runtime.sendMessage(message) as any;
+      const response = (await browser.runtime.sendMessage(message)) as any;
 
       if (response && response.profiles) {
-        // Inject badges for analyzed profiles
-        profiles.forEach(detection => {
+        // Update badges with analyzed profile data
+        profiles.forEach((detection) => {
           const profileData = response.profiles[detection.username];
           if (profileData) {
             this.injector.injectBadge(detection.element, profileData);
@@ -335,7 +363,7 @@ export class ChessComProfileDetector {
   private handleMessage(
     request: ExtensionMessage,
     _sender: browser.Runtime.MessageSender,
-    sendResponse: (response?: any) => void
+    sendResponse: (response?: any) => void,
   ): true | void {
     switch (request.type) {
       case 'TOGGLE_ENABLED':
@@ -349,16 +377,29 @@ export class ChessComProfileDetector {
         break;
 
       case 'SETTINGS_UPDATED':
-        // Re-scan with new settings
+        // Update settings and restart detection if detection method changed
+        const newUseCssDetection = request.data?.features?.useCssDetection ?? false;
+        const detectionMethodChanged = newUseCssDetection !== this.useCssDetection;
+
         this.injector.updateSettings(request.data);
+        this.useCssDetection = newUseCssDetection;
         this.detectedProfiles.clear();
-        this.scanForProfiles();
+
+        if (detectionMethodChanged && this.isEnabled) {
+          // Restart detection with new method
+          this.stopDetection();
+          this.startDetection();
+        } else {
+          // Just re-scan
+          this.scanForProfiles();
+        }
+
         sendResponse({ success: true });
         break;
 
       case 'INJECT_PROFILE_BUTTONS':
         // Inject analysis buttons for all profiles on page
-        this.buttonInjector.injectButtons().then(result => {
+        this.buttonInjector.injectButtons().then((result) => {
           sendResponse(result);
         });
         return true; // Keep message channel open for async response
@@ -395,7 +436,7 @@ export class ChessComProfileDetector {
       '.player-username',
       '.chat-message-component a',
       '.tournament-players-name',
-      '.leaderboard-row-username'
+      '.leaderboard-row-username',
     ];
 
     const allUserElements = document.querySelectorAll(selectors.join(','));
@@ -426,7 +467,9 @@ export class ChessComProfileDetector {
       }
 
       // Also check if parent has an indicator for this username
-      const existingIndicator = element.parentElement?.querySelector(`.sus-meter-picker-indicator[data-username="${username}"]`);
+      const existingIndicator = element.parentElement?.querySelector(
+        `.sus-meter-picker-indicator[data-username="${username}"]`,
+      );
       if (existingIndicator) {
         return;
       }
@@ -447,7 +490,7 @@ export class ChessComProfileDetector {
 
 // Initialize detector when content script loads
 const detector = new ChessComProfileDetector();
-detector.initialize().catch(error => {
+detector.initialize().catch((error) => {
   logger.error('Failed to initialize Chess.com detector:', error);
 });
 
