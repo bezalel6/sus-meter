@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sus Meter - Chess Profile Analyzer",
-  "version": "1.0.0",
+  "version": "1.4.20",
   "description": "Analyze chess profiles on lichess.org and chess.com to identify suspicious accounts and help streamers detect potential cheaters",
   "permissions": [
     "storage",
@@ -25,7 +25,9 @@
         "*://lichess.org/*",
         "*://www.lichess.org/*"
       ],
-      "js": ["content-lichess.js"],
+      "js": [
+        "content-lichess.js"
+      ],
       "run_at": "document_idle"
     },
     {
@@ -33,7 +35,9 @@
         "*://chess.com/*",
         "*://www.chess.com/*"
       ],
-      "js": ["content-chess-com.js"],
+      "js": [
+        "content-chess-com.js"
+      ],
       "run_at": "document_idle"
     }
   ],

@@ -1,6 +1,6 @@
 {
   "name": "sus-meter",
-  "version": "1.0.0",
+  "version": "1.4.20",
   "description": "A Chrome extension built with TypeScript",
   "scripts": {
     "dev": "webpack --watch --mode development",
