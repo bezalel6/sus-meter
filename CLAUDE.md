@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Sus Meter is a Chrome extension that analyzes user profiles on chess websites (lichess.org and chess.com) to indicate important information about users, potentially flagging suspicious behavior or profile characteristics. The extension uses Manifest V3 and is built with TypeScript.
+Sus-O-Meter is a Chrome extension that analyzes user profiles on chess websites (lichess.org and chess.com) to indicate important information about users, potentially flagging suspicious behavior or profile characteristics. The extension helps players, streamers, and tournament organizers make informed decisions by providing instant analysis of account age, statistics, and suspicious patterns. The extension uses Manifest V3 and is built with TypeScript.
 
 ## Development Commands
 

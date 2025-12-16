@@ -3,7 +3,7 @@ const path = require('path');
 const archiver = require('archiver');
 
 const distPath = path.resolve(__dirname, '../dist');
-const outputPath = path.resolve(__dirname, '../sus-meter.zip');
+const outputPath = path.resolve(__dirname, '../sus-o-meter.zip');
 
 // Check if dist folder exists
 if (!fs.existsSync(distPath)) {
@@ -14,7 +14,7 @@ if (!fs.existsSync(distPath)) {
 // Remove existing zip if it exists
 if (fs.existsSync(outputPath)) {
   fs.unlinkSync(outputPath);
-  console.log('Removed existing sus-meter.zip');
+  console.log('Removed existing sus-o-meter.zip');
 }
 
 // Create output stream
@@ -27,7 +27,7 @@ const archive = archiver('zip', {
 output.on('close', () => {
   const sizeInMB = (archive.pointer() / 1024 / 1024).toFixed(2);
   console.log(`✅ Extension packaged successfully!`);
-  console.log(`📦 File: sus-meter.zip`);
+  console.log(`📦 File: sus-o-meter.zip`);
   console.log(`📊 Size: ${sizeInMB} MB (${archive.pointer()} bytes)`);
   console.log(`📍 Location: ${outputPath}`);
 });

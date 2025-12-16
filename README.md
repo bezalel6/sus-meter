@@ -1,56 +1,110 @@
-# Sus Meter - Chrome Extension
+# Sus-O-Meter
 
-A TypeScript-based Chrome extension built with Manifest V3 that helps you analyze and meter suspicious content on web pages.
+### Know Your Opponent. Protect Your Game.
+
+A powerful Chrome extension that instantly analyzes chess player profiles on Lichess and Chess.com. Whether you're a casual player, competitive chess enthusiast, or streamer, Sus-O-Meter helps you make informed decisions about who you're playing against by revealing critical profile information at a glance.
+
+## Why Sus-O-Meter?
+
+Playing chess online should be fair and enjoyable. Sus-O-Meter empowers you to:
+
+- **Protect Your Rating** - Avoid wasting time on suspicious accounts that might be cheating
+- **Safeguard Your Streams** - Keep your content clean by identifying questionable opponents before accepting challenges
+- **Make Informed Decisions** - Quickly assess whether an opponent's profile raises red flags
+- **Save Time** - Get instant analysis without manually checking multiple profile pages
+- **Play with Confidence** - Know who you're up against before the first move
 
 ## Features
 
-- 🎯 **Real-time Analysis**: Scans web pages for suspicious content
-- 🛡️ **Security Focused**: Built with security best practices in mind
-- ⚡ **Performance Optimized**: Efficient background service worker
-- 🎨 **Modern UI**: Clean and intuitive popup interface
-- 🔧 **Configurable**: Customizable settings and preferences
-- 📊 **Visual Indicators**: Badge notifications and visual feedback
+### 🔍 Instant Profile Analysis
+Analyze any chess player profile with a single click. Get comprehensive information including account age, rating, games played, win rate, and more.
 
-## Tech Stack
+### 📊 Smart Suspicion Detection
+Advanced algorithm analyzes multiple factors to identify potentially suspicious accounts:
+- Very new accounts with high ratings
+- Unusually high win rates for account age
+- Platform-flagged accounts (maximum suspicion)
+- Minimal game history with exceptional performance
+- Accounts created recently with professional-level play
 
-- **TypeScript**: Type-safe development
-- **Manifest V3**: Latest Chrome extension standards
-- **Webpack**: Module bundling and optimization
-- **ESLint & Prettier**: Code quality and formatting
-- **webextension-polyfill**: Cross-browser compatibility
+### ⚡ Automatic Detection
+Automatically scans chess websites and highlights suspicious profiles with visual badges. No manual checking required.
 
-## Project Structure
+### 🎯 Profile Picker
+Use the profile picker tool to quickly analyze any username you see on the page - perfect for checking tournament participants, chat mentions, or leaderboard entries.
 
-```
-sus-meter/
-├── src/
-│   ├── background/       # Background service worker
-│   ├── content/          # Content scripts
-│   ├── popup/            # Popup UI
-│   ├── utils/            # Utility functions
-│   └── types/            # TypeScript type definitions
-├── public/
-│   ├── manifest.json     # Extension manifest
-│   └── icons/            # Extension icons
-├── dist/                 # Build output (generated)
-├── scripts/              # Build and utility scripts
-└── tests/                # Test files
-```
+### 🎨 Visual Feedback System
+Color-coded badges instantly communicate suspicion levels:
+- **Red**: Critical - Extremely suspicious account
+- **Orange**: High - Very suspicious patterns detected
+- **Yellow**: Medium - Some concerning factors
+- **Green**: Low - Profile appears normal
 
-## Development Setup
+### 💾 Smart Caching
+Profiles are cached for 24 hours to reduce API calls and provide instant results for recently analyzed players.
 
-### Prerequisites
+### ⚙️ Customizable Settings
+Fine-tune the analysis to match your preferences:
+- Adjust age thresholds for different suspicion levels
+- Configure rating and performance thresholds
+- Set minimum games required for established players
+- Customize win rate suspicion triggers
 
-- Node.js (v16 or higher)
-- npm or yarn
-- Chrome browser
+### 📝 Analysis History
+Keep track of profiles you've analyzed with a searchable history, making it easy to review previous checks.
 
-### Installation
+## Perfect For
+
+### 🎮 Streamers
+Protect your content and audience by screening opponents before accepting challenges. Avoid awkward situations where you might face a cheater on stream.
+
+### 🏆 Competitive Players
+Make informed decisions about which games to accept. Don't risk your rating against suspicious accounts.
+
+### 👥 Tournament Organizers
+Quickly screen participants and identify potentially problematic accounts before events begin.
+
+### 🎓 Chess Coaches
+Help students understand the importance of fair play and teach them to recognize suspicious patterns.
+
+## How It Works
+
+1. **Install the Extension** - Add Sus-O-Meter to Chrome in seconds
+2. **Visit Chess Websites** - Browse Lichess or Chess.com as usual
+3. **See Instant Badges** - Suspicious profiles are automatically highlighted with colored badges
+4. **Click for Details** - Hover over badges or click the extension icon for comprehensive analysis
+5. **Make Informed Decisions** - Choose whether to accept challenges, report accounts, or simply stay informed
+
+## Use Cases
+
+### Before Accepting a Challenge
+Someone challenges you to a game. Click their profile badge to see:
+- Account created 5 days ago? ⚠️
+- 2400 rating with only 20 games? 🚨
+- 95% win rate? 🔴
+
+### During Live Streams
+Viewers suggest playing against specific opponents. Use the profile picker to quickly check:
+- Are they legitimate players?
+- Do they have a normal progression?
+- Any red flags that might disrupt your stream?
+
+### Tournament Participation
+Browsing tournament participants? Automatically see badges next to usernames:
+- Green badges: Established players with normal patterns
+- Yellow/Red badges: Accounts worth investigating further
+
+### Chat Monitoring
+Someone mentions a player in chat. Hover over their name to see their badge and suspicion level without leaving the page.
+
+## Installation
+
+### From Source (Development)
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/sus-meter.git
-cd sus-meter
+git clone https://github.com/yourusername/sus-o-meter.git
+cd sus-o-meter
 ```
 
 2. Install dependencies:
@@ -58,209 +112,192 @@ cd sus-meter
 npm install
 ```
 
-3. Generate icon placeholders:
+3. Build the extension:
 ```bash
-node scripts/generate-icons.js
+npm run build
 ```
 
-4. Build the extension:
-```bash
-npm run build:dev
-```
+4. Load in Chrome:
+   - Open Chrome and navigate to `chrome://extensions/`
+   - Enable "Developer mode" in the top right
+   - Click "Load unpacked"
+   - Select the `dist` directory from the project
+   - Start analyzing profiles!
 
-### Development Commands
+## Development
+
+### Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn
+- Chrome browser
+
+### Available Commands
 
 ```bash
-# Start development mode with watch
+# Development with watch mode - rebuilds automatically
 npm run dev
 
 # Build for production
 npm run build
 
-# Build for development
+# Build for development (one-time)
 npm run build:dev
 
-# Run linting
-npm run lint
+# Code quality
+npm run lint          # Check for linting errors
+npm run lint:fix      # Auto-fix linting errors
+npm run format        # Format code with Prettier
+npm run type-check    # TypeScript type checking
 
-# Fix linting issues
-npm run lint:fix
+# Testing
+npm run test          # Run tests once
+npm run test:watch    # Run tests in watch mode
 
-# Format code
-npm run format
-
-# Type checking
-npm run type-check
-
-# Run tests
-npm run test
-
-# Clean build directory
-npm run clean
+# Utilities
+npm run clean         # Clean build artifacts
+npm run generate-icons # Generate icon placeholders
 ```
 
-## Loading the Extension
+### Development Workflow
 
-### In Chrome
+1. Run `npm run dev` to start watch mode
+2. Make changes to source files in `src/`
+3. Extension rebuilds automatically
+4. Reload extension in Chrome:
+   - Navigate to `chrome://extensions/`
+   - Click the refresh icon on Sus-O-Meter
+5. Test your changes on Lichess or Chess.com
 
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" in the top right
-3. Click "Load unpacked"
-4. Select the `dist` directory from this project
-5. The extension should now appear in your extensions list
+## Tech Stack
 
-### In Edge
+**Core Technologies:**
+- TypeScript - Type-safe development
+- Manifest V3 - Latest Chrome extension standards
+- Webpack - Module bundling and optimization
 
-1. Open Edge and navigate to `edge://extensions/`
-2. Enable "Developer mode"
-3. Click "Load unpacked"
-4. Select the `dist` directory
+**Code Quality:**
+- ESLint & Prettier - Code quality and formatting
+- Jest - Testing framework
 
-### In Brave
+**Browser Compatibility:**
+- webextension-polyfill - Cross-browser support
 
-1. Open Brave and navigate to `brave://extensions/`
-2. Enable "Developer mode"
-3. Click "Load unpacked"
-4. Select the `dist` directory
+## Project Structure
 
-## Usage
-
-1. Click on the Sus Meter extension icon in your browser toolbar
-2. The popup will show the current page status
-3. Click "Scan Page" to analyze the current page
-4. Configure settings as needed
-5. The extension badge will update based on scan results
-
-## Development Workflow
-
-1. Make changes to the source code
-2. Run `npm run dev` to watch for changes
-3. The extension will rebuild automatically
-4. Reload the extension in Chrome:
-   - Go to `chrome://extensions/`
-   - Click the refresh button on the Sus Meter extension card
-5. Test your changes
+```
+sus-o-meter/
+├── src/
+│   ├── background/       # Background service worker (API handler)
+│   ├── content/          # Content scripts (Lichess, Chess.com)
+│   ├── popup/            # Extension popup UI
+│   ├── utils/            # Utility functions (analyzer, cache, API)
+│   └── types/            # TypeScript type definitions
+├── public/
+│   ├── manifest.json     # Extension manifest
+│   ├── popup.html        # Popup HTML
+│   └── icons/            # Extension icons
+├── dist/                 # Build output (generated)
+└── scripts/              # Build and utility scripts
+```
 
 ## Architecture
 
-### Background Service Worker
-- Handles extension lifecycle events
-- Manages communication between components
-- Controls badge updates and notifications
+### Message-Based Communication
+All components communicate through a typed messaging system for clean separation of concerns and reliable data flow.
 
-### Content Scripts
-- Injected into web pages
-- Analyzes page content
-- Communicates findings to background script
+### Smart Caching
+Profiles are cached for 24 hours to minimize API calls and provide instant results for recently checked players.
 
-### Popup UI
-- User interface for extension control
-- Settings management
-- Real-time status display
+### Multiple Detection Methods
+- URL-based profile detection (profile pages)
+- DOM-based username scanning (chat, games, tournaments)
+- Manual search via popup interface
+- Profile picker for click-to-analyze functionality
 
-## Configuration
+### Platform-Specific Integration
+Optimized content scripts for each platform handle differences in DOM structure and API responses.
 
-### TypeScript Configuration
-- Strict mode enabled for type safety
-- Path aliases configured for clean imports
-- Source maps enabled for debugging
+## Privacy & Security
 
-### Webpack Configuration
-- Separate bundles for background, content, and popup scripts
-- Development and production modes
-- Automatic copying of static assets
+- **No Data Collection** - Your searches and analysis results stay on your device
+- **Local Storage Only** - All data stored locally in your browser
+- **Official APIs** - Uses only public, official APIs from Lichess and Chess.com
+- **Minimal Permissions** - Only requests necessary permissions for functionality
+- **No External Servers** - All analysis happens locally in your browser
 
-### ESLint & Prettier
-- Consistent code formatting
-- TypeScript-specific rules
-- Automatic fixing available
+## Supported Platforms
 
-## Security Considerations
+- ✅ **Lichess.org** - Full support for all profile types
+- ✅ **Chess.com** - Full support for all profile types
 
-- Follows Chrome Extension Manifest V3 security best practices
-- Content Security Policy configured
-- Minimal permissions requested
-- No external script injection
+## FAQ
 
-## Testing
+**Q: Does this extension detect cheaters?**
+A: Sus-O-Meter identifies suspicious patterns, but it doesn't definitively prove cheating. It's a tool to help you make informed decisions. Always report suspected cheaters through official platform channels.
 
-```bash
-# Run tests
-npm run test
+**Q: Why are some normal accounts flagged?**
+A: New accounts with high ratings might be legitimate players creating alt accounts or returning after a break. Use your judgment and consider multiple factors.
 
-# Run tests in watch mode
-npm run test:watch
-```
+**Q: Does this work on mobile?**
+A: Currently, Sus-O-Meter is only available for Chrome on desktop. Mobile browser extension support is limited.
 
-## Building for Production
+**Q: Will this slow down my browsing?**
+A: No. Sus-O-Meter is optimized for performance with efficient caching and minimal API calls.
 
-1. Update version in `manifest.json` and `package.json`
-2. Run production build:
-```bash
-npm run build
-```
-3. The production-ready extension will be in the `dist` directory
-4. Create a ZIP file of the `dist` directory for distribution
+**Q: Can I adjust the sensitivity?**
+A: Yes! Open the settings panel to customize thresholds for account age, ratings, win rates, and more.
 
-## Icons
-
-Placeholder icons are provided. To create custom icons:
-
-1. Design icons in the following sizes:
-   - 16x16 (toolbar)
-   - 32x32 (Windows)
-   - 48x48 (extensions page)
-   - 128x128 (Chrome Web Store)
-
-2. Save as PNG files in `public/icons/`
-3. Update references in `manifest.json` if needed
-
-## Troubleshooting
-
-### Extension not loading
-- Ensure you've built the project (`npm run build`)
-- Check that Developer Mode is enabled
-- Verify the `dist` directory exists and contains files
-
-### Changes not appearing
-- Reload the extension in Chrome
-- Clear the browser cache
-- Rebuild the project
-
-### TypeScript errors
-- Run `npm run type-check` to see all errors
-- Ensure all dependencies are installed
-- Check that path aliases are correctly configured
+**Q: Is my data shared with anyone?**
+A: No. All data stays on your device. We don't collect, store, or share any information.
 
 ## Contributing
 
+Contributions are welcome! Here's how you can help:
+
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details
-
-## Support
-
-For issues, questions, or suggestions, please open an issue on GitHub.
+4. Run tests and linting (`npm run test && npm run lint`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
 ## Roadmap
 
-- [ ] Add more sophisticated content analysis
-- [ ] Implement machine learning for detection
-- [ ] Add support for Firefox
-- [ ] Create options page for advanced settings
-- [ ] Add export functionality for scan results
-- [ ] Implement real-time notifications
-- [ ] Add dark mode support
-- [ ] Create unit and integration tests
+- [ ] Firefox extension support
+- [ ] Advanced machine learning-based detection
+- [ ] Whitelist/blacklist management improvements
+- [ ] Bulk tournament participant analysis
+- [ ] Profile comparison tools
+- [ ] Export analysis reports
+- [ ] Dark mode support
+- [ ] Multiple language support
+- [ ] Custom badge designs
+
+## Support
+
+Having issues or questions? Here's how to get help:
+
+- 🐛 **Bug Reports** - Open an issue on GitHub
+- 💡 **Feature Requests** - Open an issue with your suggestion
+- 📧 **Questions** - Check existing issues or open a new discussion
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details
 
 ## Acknowledgments
 
-- Chrome Extension documentation
-- TypeScript community
-- webextension-polyfill contributors
+- Lichess.org and Chess.com for providing public APIs
+- The chess community for feedback and feature suggestions
+- TypeScript and Chrome Extension communities
+
+## Disclaimer
+
+Sus-O-Meter is an independent tool not affiliated with, endorsed by, or connected to Lichess.org or Chess.com. This extension is designed to help users make informed decisions and should be used responsibly. Always report suspected cheating through official platform channels.
+
+---
+
+**Made with ♟️ for the chess community**
+
+*Stay safe, play fair, and may all your opponents be genuine players.*

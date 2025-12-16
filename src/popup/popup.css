@@ -21,22 +21,25 @@ body {
 
 /* Header */
 header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #5B68DF 0%, #6B46A2 100%);
   color: white;
-  padding: 20px;
+  padding: 24px 20px;
   text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 header h1 {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 4px;
-  letter-spacing: -0.5px;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
 }
 
 header p {
-  font-size: 13px;
-  opacity: 0.95;
+  font-size: 12px;
+  opacity: 0.92;
+  font-weight: 400;
+  letter-spacing: 0.2px;
 }
 
 .settings-button {
@@ -78,8 +81,8 @@ header p {
 
 #username-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #5B68DF;
+  box-shadow: 0 0 0 3px rgba(91, 104, 223, 0.12);
 }
 
 .platform-row {
@@ -100,8 +103,8 @@ header p {
 }
 
 .radio-label:hover {
-  border-color: #667eea;
-  background: #f8f9ff;
+  border-color: #5B68DF;
+  background: #f7f8ff;
 }
 
 .radio-label input[type="radio"] {
@@ -110,27 +113,27 @@ header p {
 }
 
 .radio-label input[type="radio"]:checked + span {
-  color: #667eea;
+  color: #5B68DF;
   font-weight: 600;
 }
 
 .search-button {
   flex: 1;
   padding: 10px 20px;
-  background: #667eea;
+  background: #5B68DF;
   color: white;
   border: none;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .search-button:hover {
-  background: #5a67d8;
+  background: #4C59CF;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 10px rgba(91, 104, 223, 0.25);
 }
 
 .search-button:active {
@@ -168,34 +171,28 @@ header p {
 }
 
 .inject-button {
-  background: linear-gradient(135deg, #48bb78, #38a169);
+  background: #10B981;
 }
 
 .inject-button:hover {
-  background: linear-gradient(135deg, #38a169, #2f855a);
+  background: #059669;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
 }
 
 .picker-button {
-  background: linear-gradient(135deg, #667eea, #5a67d8);
+  background: #5B68DF;
 }
 
 .picker-button:hover {
-  background: linear-gradient(135deg, #5a67d8, #4c51bf);
+  background: #4C59CF;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 10px rgba(91, 104, 223, 0.25);
 }
 
 .picker-button.active {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
-  50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  background: #F59E0B;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
 }
 
 .inject-button:active,
@@ -264,7 +261,7 @@ header p {
   width: 20px;
   height: 20px;
   border: 2px solid #e9ecef;
-  border-top-color: #667eea;
+  border-top-color: #5B68DF;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -369,12 +366,13 @@ header p {
 
 .platform-tag {
   padding: 4px 8px;
-  background: #667eea;
+  background: #5B68DF;
   color: white;
   border-radius: 4px;
   font-size: 11px;
   text-transform: uppercase;
   font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 /* Stats Grid */
@@ -477,7 +475,7 @@ header p {
 
 .suspicion-fill {
   height: 100%;
-  background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+  background: linear-gradient(90deg, #10B981, #F59E0B, #EF4444);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -620,13 +618,13 @@ header p {
 }
 
 .settings-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #5B68DF 0%, #6B46A2 100%);
   color: white;
-  padding: 15px 20px;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .settings-header h3 {
@@ -690,8 +688,8 @@ header p {
 
 .setting-item input[type="number"]:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #5B68DF;
+  box-shadow: 0 0 0 3px rgba(91, 104, 223, 0.12);
 }
 
 .setting-hint {
@@ -720,14 +718,14 @@ header p {
 }
 
 .save-btn {
-  background: #667eea;
+  background: #5B68DF;
   color: white;
 }
 
 .save-btn:hover {
-  background: #5a67d8;
+  background: #4C59CF;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 10px rgba(91, 104, 223, 0.25);
 }
 
 .reset-btn {

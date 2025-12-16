@@ -1,7 +1,7 @@
 {
-  "name": "sus-meter",
-  "version": "1.4.20",
-  "description": "A Chrome extension built with TypeScript",
+  "name": "sus-o-meter",
+  "version": "1.5.0",
+  "description": "Chess profile analyzer for Lichess and Chess.com. Instantly analyze player profiles, check account age, stats, and spot suspicious patterns to protect your games and streams from potential cheaters.",
   "scripts": {
     "dev": "webpack --watch --mode development",
     "build": "webpack --mode production",

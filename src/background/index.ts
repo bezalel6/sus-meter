@@ -20,7 +20,7 @@ import { CacheManager } from '@/utils/cache-manager';
 const logger = createLogger('Background');
 
 // Initialize background service worker
-logger.info('Sus Meter background service worker started');
+logger.info('Sus-O-Meter background service worker started');
 
 /**
  * Handle extension installation and updates

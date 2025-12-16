@@ -15,7 +15,7 @@ global.chrome = {
     },
     getManifest: jest.fn(() => ({
       version: '1.0.0',
-      name: 'Sus Meter',
+      name: 'Sus-O-Meter',
     })),
   },
   tabs: {

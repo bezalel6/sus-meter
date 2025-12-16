@@ -267,7 +267,7 @@ function setupListeners() {
           if (response?.active) {
             elements.pickerBtn.classList.add('active');
             elements.pickerBtn.querySelector('span:last-child')!.textContent = 'Cancel';
-            elements.injectStatus.textContent = '🎯 Click on any username to analyze';
+            elements.injectStatus.textContent = '🎯 Click any username on the page to analyze their profile';
             elements.injectStatus.className = 'inject-status picker-active';
             elements.injectStatus.classList.remove('hidden');
             isPickerActive = true;
@@ -301,19 +301,19 @@ async function performSearch() {
   const platform = getSelectedPlatform();
 
   if (!username) {
-    showError('Please enter a username');
+    showError('Please enter a username to analyze');
     elements.usernameInput.focus();
     return;
   }
 
   // Validate username format
   if (username.length < 2) {
-    showError('Username must be at least 2 characters');
+    showError('Username must be at least 2 characters long');
     return;
   }
 
   if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-    showError('Username contains invalid characters');
+    showError('Username contains invalid characters. Use only letters, numbers, hyphens, and underscores.');
     return;
   }
 
@@ -360,11 +360,11 @@ async function performSearch() {
 
     // More helpful error messages
     if (err.message?.includes('fetch')) {
-      showError('Network error. Check your internet connection.');
+      showError('Network error. Please check your internet connection and try again.');
     } else if (err.message?.includes('timeout')) {
-      showError('Request timed out. Please try again.');
+      showError('Request timed out. The chess platform may be experiencing delays.');
     } else {
-      showError('Failed to fetch profile. Please try again.');
+      showError('Failed to retrieve profile. Please verify the username and try again.');
     }
 
     elements.usernameInput.select();
@@ -482,7 +482,7 @@ function displayHistory() {
   if (searchHistory.length === 0) {
     const emptyMsg = document.createElement('div');
     emptyMsg.className = 'history-empty';
-    emptyMsg.textContent = 'No recent searches';
+    emptyMsg.textContent = 'No profiles analyzed yet';
     emptyMsg.style.cssText = 'text-align: center; color: #9ca3af; font-size: 12px; padding: 12px;';
     elements.historyList.appendChild(emptyMsg);
     return;
@@ -1041,7 +1041,7 @@ async function injectProfileButtons() {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
 
     if (!tab || !tab.id) {
-      showInjectStatus('No active tab found', 'error');
+      showInjectStatus('No active tab detected. Please try again.', 'error');
       return;
     }
 
@@ -1051,7 +1051,7 @@ async function injectProfileButtons() {
     const isChesscom = url.includes('chess.com');
 
     if (!isLichess && !isChesscom) {
-      showInjectStatus('Please navigate to Lichess or Chess.com first', 'error');
+      showInjectStatus('Please navigate to Lichess.org or Chess.com to use this feature', 'error');
       return;
     }
 
@@ -1112,12 +1112,12 @@ async function injectProfileButtons() {
           'error',
         );
       } else {
-        showInjectStatus('Injection failed. Please check the console for details.', 'error');
+        showInjectStatus('Analysis injection failed. Please refresh the page and try again.', 'error');
       }
     }
   } catch (error) {
     console.error('Injection error:', error);
-    showInjectStatus('An unexpected error occurred. Please check the console.', 'error');
+    showInjectStatus('An unexpected error occurred. Please try again.', 'error');
   } finally {
     elements.injectBtn.disabled = false;
   }
@@ -1144,7 +1144,7 @@ async function enablePickerMode() {
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
 
     if (!tab || !tab.id) {
-      showInjectStatus('No active tab found', 'error');
+      showInjectStatus('No active tab detected. Please try again.', 'error');
       return;
     }
 
@@ -1154,7 +1154,7 @@ async function enablePickerMode() {
     const isChesscom = url.includes('chess.com');
 
     if (!isLichess && !isChesscom) {
-      showInjectStatus('Please navigate to Lichess or Chess.com first', 'error');
+      showInjectStatus('Please navigate to Lichess.org or Chess.com to use this feature', 'error');
       return;
     }
 
@@ -1175,7 +1175,7 @@ async function enablePickerMode() {
     });
   } catch (error) {
     console.error('Failed to enable picker mode:', error);
-    showInjectStatus('Failed to enable picker mode', 'error');
+    showInjectStatus('Unable to enable picker mode. Please refresh the page.', 'error');
     elements.pickerBtn.classList.remove('active');
   }
 }
