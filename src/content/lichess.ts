@@ -11,13 +11,11 @@ const platform: ChessPlatform = 'lichess';
  * Lichess-specific profile detector
  */
 export class LichessProfileDetector {
-  private observer: MutationObserver | null = null;
   private animationHandler: ((e: AnimationEvent) => void) | null = null;
   private injector: ProfileInjector;
   private buttonInjector: ProfileButtonInjector;
   private detectedProfiles = new Set<string>();
   private isEnabled = true;
-  private useCssDetection = false;
 
   constructor() {
     this.injector = new ProfileInjector(platform);
@@ -37,11 +35,9 @@ export class LichessProfileDetector {
       })) as any;
 
       this.isEnabled = response?.enabled ?? true;
-      this.useCssDetection = response?.features?.useCssDetection ?? false;
     } catch (error) {
       logger.error('Failed to get settings:', error);
       this.isEnabled = true;
-      this.useCssDetection = false;
     }
 
     if (this.isEnabled) {
@@ -61,17 +57,10 @@ export class LichessProfileDetector {
     // Initial scan for already-present elements
     this.scanForProfiles();
 
-    if (this.useCssDetection) {
-      // Use CSS animation detection (more efficient)
-      this.startCssDetection();
-    } else {
-      // Use MutationObserver (fallback)
-      this.startMutationObserver();
-    }
+    // Use CSS animation detection
+    this.startCssDetection();
 
-    logger.debug(
-      `Started profile detection (${this.useCssDetection ? 'CSS animation' : 'MutationObserver'})`,
-    );
+    logger.debug('Started profile detection (CSS animation)');
   }
 
   /**
@@ -86,29 +75,6 @@ export class LichessProfileDetector {
 
     document.addEventListener('animationstart', this.animationHandler, true);
     logger.debug('CSS animation detection active');
-  }
-
-  /**
-   * Start MutationObserver-based detection (fallback)
-   */
-  private startMutationObserver(): void {
-    this.observer = new MutationObserver((mutations) => {
-      // Batch mutations to avoid excessive scanning
-      const hasRelevantChanges = mutations.some(
-        (mutation) => mutation.type === 'childList' && mutation.addedNodes.length > 0,
-      );
-
-      if (hasRelevantChanges) {
-        this.scanForProfiles();
-      }
-    });
-
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-
-    logger.debug('MutationObserver detection active');
   }
 
   /**
@@ -158,12 +124,6 @@ export class LichessProfileDetector {
    * Stop detecting profiles
    */
   private stopDetection(): void {
-    // Clean up MutationObserver
-    if (this.observer) {
-      this.observer.disconnect();
-      this.observer = null;
-    }
-
     // Clean up CSS animation listener
     if (this.animationHandler) {
       document.removeEventListener('animationstart', this.animationHandler, true);
@@ -341,22 +301,10 @@ export class LichessProfileDetector {
         break;
 
       case 'SETTINGS_UPDATED':
-        // Update settings and restart detection if detection method changed
-        const newUseCssDetection = request.data?.features?.useCssDetection ?? false;
-        const detectionMethodChanged = newUseCssDetection !== this.useCssDetection;
-
         this.injector.updateSettings(request.data);
-        this.useCssDetection = newUseCssDetection;
         this.detectedProfiles.clear();
-
-        if (detectionMethodChanged && this.isEnabled) {
-          // Restart detection with new method
-          this.stopDetection();
-          this.startDetection();
-        } else {
-          // Just re-scan
-          this.scanForProfiles();
-        }
+        // Re-scan with new settings
+        this.scanForProfiles();
 
         sendResponse({ success: true });
         break;

@@ -70,7 +70,6 @@ export interface ExtensionSettings {
     checkOpponents: boolean;
     checkTournamentPlayers: boolean;
     alertOnSuspicious: boolean;
-    useCssDetection: boolean; // Use CSS animation detection (default) or MutationObserver (experimental)
   };
   thresholds: {
     // Age-based suspicion thresholds (tiered)
@@ -193,7 +192,6 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
     checkOpponents: true,
     checkTournamentPlayers: true,
     alertOnSuspicious: true,
-    useCssDetection: true, // CSS animation detection is now the default (efficient)
   },
   thresholds: {
     // Age-based suspicion thresholds (stricter defaults)

@@ -65,7 +65,6 @@ const elements = {
   highRating: document.getElementById('high-rating') as HTMLInputElement,
   minGames: document.getElementById('min-games') as HTMLInputElement,
   winRate: document.getElementById('win-rate') as HTMLInputElement,
-  cssDetectionCheck: document.getElementById('css-detection-check') as HTMLInputElement,
 };
 
 // State
@@ -574,8 +573,7 @@ async function loadSettings() {
   const settings = result['settings'] as { thresholds?: any; features?: any } | undefined;
 
   // Store settings in memory
-  currentSettings.thresholds.criticalAccountDays =
-    settings?.thresholds?.criticalAccountDays || 14;
+  currentSettings.thresholds.criticalAccountDays = settings?.thresholds?.criticalAccountDays || 14;
   currentSettings.thresholds.highSuspicionAccountDays =
     settings?.thresholds?.highSuspicionAccountDays || 30;
   currentSettings.thresholds.suspiciousAccountDays =
@@ -588,7 +586,6 @@ async function loadSettings() {
   elements.highRating.value = String(settings?.thresholds?.highRatingThreshold || 2000);
   elements.minGames.value = String(settings?.thresholds?.minGamesRequired || 50);
   elements.winRate.value = String(settings?.thresholds?.suspiciousWinRate || 75);
-  elements.cssDetectionCheck.checked = settings?.features?.useCssDetection || false;
 }
 
 // Save settings
@@ -604,9 +601,6 @@ async function saveSettings() {
       minGamesRequired: parseInt(elements.minGames.value) || 50,
       suspiciousWinRate: parseInt(elements.winRate.value) || 75,
       suspicionAlertLevel: 'high', // Keep default for now
-    },
-    features: {
-      useCssDetection: elements.cssDetectionCheck.checked,
     },
   };
 

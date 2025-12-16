@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sus Meter - Chess Profile Analyzer",
-  "version": "1.4.20",
+  "version": "1.4.2069",
   "description": "Analyze chess profiles on lichess.org and chess.com to identify suspicious accounts and help streamers detect potential cheaters",
   "permissions": [
     "storage",
