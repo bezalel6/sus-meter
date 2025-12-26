@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Sus-O-Meter is a Chrome extension that analyzes user profiles on chess websites (lichess.org and chess.com) to indicate important information about users, potentially flagging suspicious behavior or profile characteristics. The extension helps players, streamers, and tournament organizers make informed decisions by providing instant analysis of account age, statistics, and suspicious patterns. The extension uses Manifest V3 and is built with TypeScript.
+Sus-O-Meter is a cross-browser extension (Chrome & Firefox) that analyzes user profiles on chess websites (lichess.org and chess.com) to indicate important information about users, potentially flagging suspicious behavior or profile characteristics. The extension helps players, streamers, and tournament organizers make informed decisions by providing instant analysis of account age, statistics, and suspicious patterns. The extension uses Manifest V3 and is built with TypeScript.
 
 ## Development Commands
 
@@ -12,14 +12,24 @@ Sus-O-Meter is a Chrome extension that analyzes user profiles on chess websites 
 # Install dependencies
 npm install
 
-# Development with watch mode - primary development command
-npm run dev
+# Development with watch mode
+npm run dev              # Chrome (default) - primary development command
+npm run dev:chrome       # Chrome-specific development
+npm run dev:firefox      # Firefox-specific development
 
 # Build for production
-npm run build
+npm run build            # Build both Chrome and Firefox versions
+npm run build:chrome     # Chrome-only production build
+npm run build:firefox    # Firefox-only production build
 
 # Build for development (one-time, no watch)
-npm run build:dev
+npm run build:dev        # Chrome development build
+npm run build:dev:chrome # Chrome development build
+npm run build:dev:firefox # Firefox development build
+
+# Packaging
+npm run zip              # Create zip files for both browsers
+npm run package          # Build and zip both versions
 
 # Linting and formatting
 npm run lint          # Check for linting errors
@@ -33,8 +43,41 @@ npm run test:watch    # Run tests in watch mode
 jest --testPathPattern=specific.test.ts  # Run specific test file
 
 # Clean build artifacts
-npm run clean
+npm run clean         # Remove both dist-chrome and dist-firefox
 ```
+
+## Cross-Browser Build System
+
+The project supports both Chrome and Firefox with dedicated manifest files and build outputs:
+
+### Manifest Files
+
+- **`public/manifest-chrome.json`**: Chrome-specific manifest using `service_worker` for background scripts
+- **`public/manifest-firefox.json`**: Firefox-specific manifest with `browser_specific_settings` and `scripts` array for background
+
+Key differences between manifests:
+- Firefox includes `browser_specific_settings.gecko` with:
+  - Extension ID (`sus-o-meter@chess-analyzer.extension`)
+  - Minimum version requirement (Firefox 109+)
+  - `data_collection_permissions: false` (extension doesn't collect user data)
+- Firefox uses `background.scripts` array, Chrome uses `background.service_worker`
+- Both use Manifest V3 for consistency
+
+### Build Outputs
+
+- **`dist-chrome/`**: Chrome extension build with manifest-chrome.json copied as manifest.json
+- **`dist-firefox/`**: Firefox extension build with manifest-firefox.json copied as manifest.json
+- **`sus-o-meter-chrome.zip`**: Packaged Chrome extension
+- **`sus-o-meter-firefox.zip`**: Packaged Firefox extension
+
+### Webpack Configuration
+
+The webpack config accepts a `--env browser=<chrome|firefox>` flag to determine:
+1. Which manifest file to copy (`manifest-<browser>.json` → `manifest.json`)
+2. Output directory (`dist-<browser>/`)
+3. Browser-specific optimizations if needed
+
+Default browser is Chrome for backwards compatibility.
 
 ## Architecture & Communication Patterns
 
@@ -84,11 +127,13 @@ The project uses path aliases configured in both TypeScript and Webpack:
 
 ## Extension Development Workflow
 
+### Chrome Development
+
 1. **Loading Extension for Development**:
-   - Run `npm run dev` to start watch mode
+   - Run `npm run dev` or `npm run dev:chrome` to start watch mode
    - Navigate to `chrome://extensions/`
    - Enable "Developer mode"
-   - Click "Load unpacked" and select the `dist` directory
+   - Click "Load unpacked" and select the `dist-chrome` directory
    - After changes, click the refresh icon on the extension card
 
 2. **Testing Changes**:
@@ -98,6 +143,25 @@ The project uses path aliases configured in both TypeScript and Webpack:
 
 3. **Debugging**:
    - Background: Click "Inspect views: service worker" in extension card
+   - Content: Use browser DevTools on the chess website
+   - Popup: Right-click popup and select "Inspect"
+
+### Firefox Development
+
+1. **Loading Extension for Development**:
+   - Run `npm run dev:firefox` to start watch mode
+   - Navigate to `about:debugging#/runtime/this-firefox`
+   - Click "Load Temporary Add-on"
+   - Select any file in the `dist-firefox` directory (e.g., manifest.json)
+   - After changes, click the "Reload" button for the extension
+
+2. **Testing Changes**:
+   - Content script changes: Reload the chess website page
+   - Background script changes: Click reload in about:debugging
+   - Popup changes: Close and reopen the popup
+
+3. **Debugging**:
+   - Background: Click "Inspect" next to the extension in about:debugging
    - Content: Use browser DevTools on the chess website
    - Popup: Right-click popup and select "Inspect"
 

@@ -6,6 +6,8 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
   const isDevelopment = !isProduction;
+  const browser = env?.browser || 'chrome'; // Default to chrome
+  const distDir = `dist-${browser}`;
 
   return {
     entry: {
@@ -15,7 +17,7 @@ module.exports = (env, argv) => {
       popup: './src/popup/index.ts',
     },
     output: {
-      path: path.resolve(__dirname, 'dist'),
+      path: path.resolve(__dirname, distDir),
       filename: '[name].js',
       clean: true,
     },
@@ -54,7 +56,7 @@ module.exports = (env, argv) => {
       new CopyPlugin({
         patterns: [
           {
-            from: 'public/manifest.json',
+            from: `public/manifest-${browser}.json`,
             to: 'manifest.json',
           },
           {

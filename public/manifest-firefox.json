@@ -1,0 +1,75 @@
+{
+  "manifest_version": 3,
+  "name": "Sus-O-Meter - Chess Profile Analyzer",
+  "version": "1.5.0",
+  "description": "Analyze chess profiles on Lichess & Chess.com. Check account age, stats & spot suspicious patterns to protect your games.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "sus-o-meter@chess-analyzer.extension",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "alarms",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://lichess.org/*",
+    "*://www.lichess.org/*",
+    "*://chess.com/*",
+    "*://www.chess.com/*",
+    "*://api.chess.com/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://lichess.org/*",
+        "*://www.lichess.org/*"
+      ],
+      "js": [
+        "content-lichess.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://chess.com/*",
+        "*://www.chess.com/*"
+      ],
+      "js": [
+        "content-chess-com.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
